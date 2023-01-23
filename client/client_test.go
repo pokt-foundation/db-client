@@ -3,6 +3,7 @@ package dbclient
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ var (
 type DBClientTestSuite struct {
 	suite.Suite
 	client *DBClient
+	mu     sync.Mutex
 }
 
 func Test_RunDBClientTestSuite(t *testing.T) {
@@ -49,7 +51,16 @@ func (ts *DBClientTestSuite) initDBClient() error {
 	return nil
 }
 
+func boolPointer(value bool) *bool {
+	return &value
+}
+
+// Runs all the read-only endpoint tests first to compare to test DB seed data only
+// ie. not yet including data written to the test DB by the test suite
 func (ts *DBClientTestSuite) Test_ReadTests() {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
 	ts.Run("Test_GetBlockchains", func() {
 		tests := []struct {
 			name                string
@@ -177,8 +188,8 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}
 
 		for _, test := range tests {
-			blockchain, err := ts.client.GetBlockchain(testCtx, test.blockchainID)
-			ts.Equal(err, test.err)
+			blockchain, err := ts.client.GetBlockchainByID(testCtx, test.blockchainID)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedBlockchain, blockchain)
 		}
 	})
@@ -261,7 +272,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			applications, err := ts.client.GetApplications(testCtx)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedApplications, applications)
 		}
 	})
@@ -319,7 +330,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			applicationByID, err := ts.client.GetApplicationByID(testCtx, test.applicationID)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedApplication, applicationByID)
 		}
 	})
@@ -378,7 +389,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			applicationsByUserID, err := ts.client.GetApplicationsByUserID(testCtx, test.userID)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedApplications, applicationsByUserID)
 		}
 	})
@@ -527,7 +538,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			loadBalancers, err := ts.client.GetLoadBalancers(testCtx)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedLoadBalancers, loadBalancers)
 		}
 	})
@@ -606,7 +617,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			loadBalancerByID, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedLoadBalancer, loadBalancerByID)
 		}
 	})
@@ -688,7 +699,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			loadBalancersByUserID, err := ts.client.GetLoadBalancersByUserID(testCtx, test.userID)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedLoadBalancers, loadBalancersByUserID)
 		}
 	})
@@ -714,7 +725,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			payPlans, err := ts.client.GetPayPlans(testCtx)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedPayPlans, payPlans)
 		}
 	})
@@ -728,23 +739,33 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}{
 			{
 
-				name:        "Should fetch a single pay plans by type",
+				name:        "Should fetch a single pay plan by type",
 				payPlanType: types.FreetierV0,
 				expectedPayPlan: &types.PayPlan{
 					Type: types.FreetierV0, Limit: 250000,
 				},
 			},
+			{
+				name:        "Should fail if passed a pay plan type that is not in the DB",
+				payPlanType: types.PayPlanType("not_a_real_plan"),
+				err:         fmt.Errorf("Response not OK. 404 Not Found: pay plan not found"),
+			},
 		}
 
 		for _, test := range tests {
 			payPlanByType, err := ts.client.GetPayPlanByType(testCtx, test.payPlanType)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			ts.Equal(test.expectedPayPlan, payPlanByType)
 		}
 	})
 }
 
+// Runs all the write endpoint tests after the read tests
+// This ensures the write tests to not modify the seed data expected by the read tests
 func (ts *DBClientTestSuite) Test_WriteTests() {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
 	ts.Run("Test_CreateBlockchain", func() {
 		tests := []struct {
 			name                        string
@@ -789,14 +810,35 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					},
 				},
 			},
+			{
+				name: "Should fail if attempting to create a duplicate record",
+				blockchainInput: types.Blockchain{
+					ID:                "003",
+					Altruist:          "https://test:test_fg332f@shared-test3.nodes.pol.network:12345",
+					Blockchain:        "pol-mainnet",
+					Description:       "Polygon Mainnet",
+					EnforceResult:     "JSON",
+					Network:           "POL-mainnet",
+					Ticker:            "POL",
+					BlockchainAliases: []string{"pol-mainnet"},
+					LogLimitBlocks:    100000,
+					Active:            true,
+					SyncCheckOptions: types.SyncCheckOptions{
+						Body:      "{}",
+						ResultKey: "result",
+						Allowance: 3,
+					},
+				},
+				err: fmt.Errorf("Response not OK. 500 Internal Server Error: pq: duplicate key value violates unique constraint \"blockchains_pkey\""),
+			},
 		}
 
 		for _, test := range tests {
 			_, err := ts.client.CreateBlockchain(testCtx, test.blockchainInput)
-			ts.Equal(err, test.err)
+			ts.Equal(test.err, err)
 			if test.err == nil {
-				blockchain, err := ts.client.GetBlockchain(testCtx, test.blockchainInput.ID)
-				ts.Equal(err, test.err)
+				blockchain, err := ts.client.GetBlockchainByID(testCtx, test.blockchainInput.ID)
+				ts.Equal(test.err, err)
 				ts.Equal(test.blockchain.ID, blockchain.ID)
 				ts.Equal(test.blockchain.Altruist, blockchain.Altruist)
 				ts.Equal(test.blockchain.Blockchain, blockchain.Blockchain)
@@ -819,121 +861,515 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			}
 		}
 	})
+
+	ts.Run("Test_CreateRedirect", func() {
+		tests := []struct {
+			name          string
+			redirectInput types.Redirect
+			redirects     []types.Redirect
+			err           error
+		}{
+			{
+				name: "Should create a new redirect for an existing blockchain in the DB",
+				redirectInput: types.Redirect{
+					BlockchainID:   "0001",
+					Alias:          "test-mainnet-3",
+					Domain:         "test-rpc3.testnet.pokt.network",
+					LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+				},
+				redirects: []types.Redirect{
+					{
+						Alias:          "test-mainnet",
+						Domain:         "test-rpc1.testnet.pokt.network",
+						LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+					},
+					{
+						Alias:          "test-mainnet",
+						Domain:         "test-rpc2.testnet.pokt.network",
+						LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+					},
+					{
+						Alias:          "test-mainnet-3",
+						Domain:         "test-rpc3.testnet.pokt.network",
+						LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+					},
+				},
+			},
+			{
+				name: "Should fail if attempting to create a duplicate record",
+				redirectInput: types.Redirect{
+					BlockchainID:   "0001",
+					Alias:          "test-mainnet-3",
+					Domain:         "test-rpc3.testnet.pokt.network",
+					LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+				},
+				err: fmt.Errorf("Response not OK. 500 Internal Server Error: pq: duplicate key value violates unique constraint \"redirects_blockchain_id_domain_key\""),
+			},
+		}
+
+		for _, test := range tests {
+			_, err := ts.client.CreateBlockchainRedirect(testCtx, test.redirectInput)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				blockchain, err := ts.client.GetBlockchainByID(testCtx, test.redirectInput.BlockchainID)
+				ts.Equal(test.err, err)
+				ts.Len(blockchain.Redirects, len(test.redirects))
+				for i, redirect := range blockchain.Redirects {
+					ts.Equal(test.redirects[i].Alias, redirect.Alias)
+					ts.Equal(test.redirects[i].Domain, redirect.Domain)
+					ts.Equal(test.redirects[i].LoadBalancerID, redirect.LoadBalancerID)
+				}
+			}
+		}
+	})
+
+	ts.Run("Test_CreateApplication", func() {
+		tests := []struct {
+			name                          string
+			applicationInput, application types.Application
+			err                           error
+		}{
+			{
+				name: "Should create a single application in the DB",
+				applicationInput: types.Application{
+					Name:   "pokt_app_789",
+					UserID: "test_user_47fhsd75jd756sh",
+					Dummy:  true,
+					Status: types.InService,
+					GatewayAAT: types.GatewayAAT{
+						Address:              "test_e209a2d1f3454ddc69cb9333d547bbcf",
+						ApplicationPublicKey: "test_b95c35affacf6df4a5585388490542f0",
+						ApplicationSignature: "test_e59760339d9ce02972d1080d73446c90",
+						ClientPublicKey:      "test_d591178ab3f48f45b243303fe77dc8c3",
+						PrivateKey:           "test_f403700aed7e039c0a8fc2dd22da6fd9",
+					},
+					GatewaySettings: types.GatewaySettings{
+						SecretKey:         "test_489574398f34uhf4uhjf9328jf23f98j",
+						SecretKeyRequired: true,
+					},
+					Limit: types.AppLimit{
+						PayPlan: types.PayPlan{Type: types.FreetierV0},
+					},
+					NotificationSettings: types.NotificationSettings{SignedUp: true, Quarter: false, Half: false, ThreeQuarters: true, Full: true},
+				},
+				application: types.Application{
+					Name:   "pokt_app_789",
+					UserID: "test_user_47fhsd75jd756sh",
+					Dummy:  true,
+					Status: types.InService,
+					GatewayAAT: types.GatewayAAT{
+						Address:              "test_e209a2d1f3454ddc69cb9333d547bbcf",
+						ApplicationPublicKey: "test_b95c35affacf6df4a5585388490542f0",
+						ApplicationSignature: "test_e59760339d9ce02972d1080d73446c90",
+						ClientPublicKey:      "test_d591178ab3f48f45b243303fe77dc8c3",
+						PrivateKey:           "test_f403700aed7e039c0a8fc2dd22da6fd9",
+					},
+					GatewaySettings: types.GatewaySettings{
+						SecretKey:         "test_489574398f34uhf4uhjf9328jf23f98j",
+						SecretKeyRequired: true,
+					},
+					Limit: types.AppLimit{
+						PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
+					},
+					NotificationSettings: types.NotificationSettings{SignedUp: true, Quarter: false, Half: false, ThreeQuarters: true, Full: true},
+				},
+			},
+		}
+
+		for _, test := range tests {
+			createdApp, err := ts.client.CreateApplication(testCtx, test.applicationInput)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				time.Sleep(100 * time.Millisecond)
+
+				application, err := ts.client.GetApplicationByID(testCtx, createdApp.ID)
+				ts.Equal(test.err, err)
+				ts.Equal(createdApp.ID, application.ID)
+				ts.Equal(test.application.Dummy, application.Dummy)
+				ts.Equal(test.application.Status, application.Status)
+				ts.Equal(test.application.GatewayAAT, application.GatewayAAT)
+				ts.Equal(test.application.GatewaySettings, application.GatewaySettings)
+				ts.Equal(test.application.Limit, application.Limit)
+				ts.Equal(test.application.NotificationSettings, application.NotificationSettings)
+				ts.NotEmpty(application.CreatedAt)
+				ts.NotEmpty(application.UpdatedAt)
+			}
+		}
+	})
+
+	ts.Run("Test_CreateLoadBalancer", func() {
+		tests := []struct {
+			name                            string
+			loadBalancerInput, loadBalancer types.LoadBalancer
+			err                             error
+		}{
+			{
+				name: "Should create a single loadBalancer in the DB",
+				loadBalancerInput: types.LoadBalancer{
+					Name:              "pokt_app_789",
+					UserID:            "test_user_47fhsd75jd756sh",
+					RequestTimeout:    5000,
+					Gigastake:         true,
+					GigastakeRedirect: true,
+					ApplicationIDs:    []string{"test_app_47hfnths73j2se"},
+					StickyOptions: types.StickyOptions{
+						Duration:      "70",
+						StickyOrigins: []string{"chrome-extension://"},
+						StickyMax:     400,
+						Stickiness:    true,
+					},
+					Users: []types.UserAccess{
+						{
+							UserID:   "test_user_47fhsd75jd756sh",
+							RoleName: types.RoleOwner,
+							Email:    "owner4@test.com",
+							Accepted: true,
+						},
+					},
+				},
+				loadBalancer: types.LoadBalancer{
+					Name:              "pokt_app_789",
+					UserID:            "test_user_47fhsd75jd756sh",
+					RequestTimeout:    5000,
+					Gigastake:         true,
+					GigastakeRedirect: true,
+					Applications: []*types.Application{
+						{
+							ID:     "test_app_47hfnths73j2se",
+							UserID: "test_user_1dbffbdfeeb225",
+							Name:   "pokt_app_123",
+							URL:    "https://test.app123.io",
+							Dummy:  true,
+							Status: types.InService,
+							GatewayAAT: types.GatewayAAT{
+								Address:              "test_34715cae753e67c75fbb340442e7de8e",
+								ApplicationPublicKey: "test_11b8d394ca331d7c7a71ca1896d630f6",
+								ApplicationSignature: "test_89a3af6a587aec02cfade6f5000424c2",
+								ClientPublicKey:      "test_1dc39a2e5a84a35bf030969a0b3231f7",
+								PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
+							},
+							GatewaySettings: types.GatewaySettings{
+								SecretKey:         "test_40f482d91a5ef2300ebb4e2308c",
+								SecretKeyRequired: true,
+							},
+							Limit: types.AppLimit{
+								PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
+							},
+							NotificationSettings: types.NotificationSettings{
+								SignedUp:      true,
+								Quarter:       false,
+								Half:          false,
+								ThreeQuarters: true,
+								Full:          true,
+							},
+							CreatedAt: mockTimestamp,
+							UpdatedAt: mockTimestamp,
+						},
+					},
+					StickyOptions: types.StickyOptions{
+						Duration:      "70",
+						StickyOrigins: []string{"chrome-extension://"},
+						StickyMax:     400,
+						Stickiness:    true,
+					},
+					Users: []types.UserAccess{
+						{
+							UserID:   "test_user_47fhsd75jd756sh",
+							RoleName: types.RoleOwner,
+							Email:    "owner4@test.com",
+							Accepted: true,
+						},
+					},
+				},
+			},
+		}
+
+		for _, test := range tests {
+			createdLB, err := ts.client.CreateLoadBalancer(testCtx, test.loadBalancerInput)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, createdLB.ID)
+				ts.Equal(test.err, err)
+				ts.Equal(createdLB.ID, loadBalancer.ID)
+				ts.Equal(test.loadBalancer.UserID, loadBalancer.UserID)
+				ts.Equal(test.loadBalancer.Name, loadBalancer.Name)
+				ts.Equal(test.loadBalancer.UserID, loadBalancer.UserID)
+				ts.Equal(test.loadBalancer.RequestTimeout, loadBalancer.RequestTimeout)
+				ts.Equal(test.loadBalancer.Gigastake, loadBalancer.Gigastake)
+				ts.Equal(test.loadBalancer.GigastakeRedirect, loadBalancer.GigastakeRedirect)
+				ts.Equal(test.loadBalancer.ApplicationIDs, loadBalancer.ApplicationIDs)
+				ts.Equal(test.loadBalancer.Applications, loadBalancer.Applications)
+				ts.Equal(test.loadBalancer.StickyOptions, loadBalancer.StickyOptions)
+				ts.Equal(test.loadBalancer.Users, loadBalancer.Users)
+				ts.NotEmpty(loadBalancer.CreatedAt)
+				ts.NotEmpty(loadBalancer.UpdatedAt)
+			}
+		}
+	})
+
+	ts.Run("Test_ActivateBlockchain", func() {
+		tests := []struct {
+			name         string
+			blockchainID string
+			active       bool
+			err          error
+		}{
+			{
+				name:         "Should set a blockchain's active field to false",
+				blockchainID: "0001",
+				active:       false,
+			},
+			{
+				name:         "Should set a blockchain's active field to true",
+				blockchainID: "0001",
+				active:       true,
+			},
+			{
+				name:         "Should fail if blockchain cannot be found",
+				blockchainID: "5440",
+				err:          fmt.Errorf("Response not OK. 404 Not Found: blockchain not found"),
+			},
+		}
+
+		for _, test := range tests {
+			_, err := ts.client.ActivateBlockchain(testCtx, test.blockchainID, test.active)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				blockchain, err := ts.client.GetBlockchainByID(testCtx, test.blockchainID)
+				ts.Equal(test.err, err)
+				ts.Equal(test.active, blockchain.Active)
+			}
+		}
+	})
+
+	ts.Run("Test_UpdateApplication", func() {
+		tests := []struct {
+			name                   string
+			applicationID          string
+			applicationUpdate      types.UpdateApplication
+			applicationAfterUpdate types.Application
+			err                    error
+		}{
+			{
+				name:          "Should update a single application in the DB",
+				applicationID: "test_app_47hfnths73j2se",
+				applicationUpdate: types.UpdateApplication{
+					Name: "pokt_app_updated_lb",
+					GatewaySettings: &types.UpdateGatewaySettings{
+						WhitelistOrigins:     []string{"test-origin1", "test-origin2"},
+						WhitelistUserAgents:  []string{"test-agent1"},
+						WhitelistContracts:   []types.WhitelistContract{{BlockchainID: "01", Contracts: []string{"test-contract1"}}},
+						WhitelistMethods:     []types.WhitelistMethod{{BlockchainID: "01", Methods: []string{"test-method1"}}},
+						WhitelistBlockchains: []string{"test-chain1"},
+					},
+					NotificationSettings: &types.UpdateNotificationSettings{SignedUp: boolPointer(false), Quarter: boolPointer(true), Half: boolPointer(true), ThreeQuarters: boolPointer(false), Full: boolPointer(false)},
+					Limit:                &types.AppLimit{PayPlan: types.PayPlan{Type: types.Enterprise}, CustomLimit: 4_200_000},
+				},
+				applicationAfterUpdate: types.Application{
+					Name: "pokt_app_updated_lb",
+					GatewaySettings: types.GatewaySettings{
+						SecretKey:            "test_40f482d91a5ef2300ebb4e2308c",
+						SecretKeyRequired:    true,
+						WhitelistOrigins:     []string{"test-origin1", "test-origin2"},
+						WhitelistUserAgents:  []string{"test-agent1"},
+						WhitelistContracts:   []types.WhitelistContract{{BlockchainID: "01", Contracts: []string{"test-contract1"}}},
+						WhitelistMethods:     []types.WhitelistMethod{{BlockchainID: "01", Methods: []string{"test-method1"}}},
+						WhitelistBlockchains: []string{"test-chain1"},
+					},
+					NotificationSettings: types.NotificationSettings{SignedUp: false, Quarter: true, Half: true, ThreeQuarters: false, Full: false},
+					Limit:                types.AppLimit{PayPlan: types.PayPlan{Type: types.Enterprise}, CustomLimit: 4_200_000},
+				},
+			},
+			{
+				name:          "Should fail if application cannot be found",
+				applicationID: "9000",
+				err:           fmt.Errorf("Response not OK. 404 Not Found: applications not found"),
+			},
+		}
+
+		for _, test := range tests {
+			createdApp, err := ts.client.UpdateApplication(testCtx, test.applicationID, test.applicationUpdate)
+			ts.Equal(test.err, err)
+			if err == nil {
+				application, err := ts.client.GetApplicationByID(testCtx, createdApp.ID)
+				ts.NoError(err)
+				ts.Equal(test.applicationAfterUpdate.Name, application.Name)
+				ts.Equal(test.applicationAfterUpdate.GatewaySettings, application.GatewaySettings)
+				ts.Equal(test.applicationAfterUpdate.NotificationSettings, application.NotificationSettings)
+				ts.Equal(test.applicationAfterUpdate.Limit, application.Limit)
+			}
+		}
+	})
+
+	ts.Run("Test_UpdateAppFirstDateSurpassed", func() {
+		tests := []struct {
+			name         string
+			update       types.UpdateFirstDateSurpassed
+			expectedDate time.Time
+			err          error
+		}{
+			{
+				name: "Should update the app first date suprassed for the provided slice of app IDs",
+				update: types.UpdateFirstDateSurpassed{
+					ApplicationIDs:     []string{"test_app_47hfnths73j2se", "test_app_5hdf7sh23jd828"},
+					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
+				},
+				expectedDate: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
+				err:          nil,
+			},
+			{
+				name: "Should fail if update contains no application IDs cannot be found",
+				update: types.UpdateFirstDateSurpassed{
+					ApplicationIDs:     []string{},
+					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
+				},
+				err: fmt.Errorf("Response not OK. 400 Bad Request: no application IDs on input"),
+			},
+			{
+				name: "Should fail if application cannot be found",
+				update: types.UpdateFirstDateSurpassed{
+					ApplicationIDs:     []string{"9000"},
+					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
+				},
+				err: fmt.Errorf("Response not OK. 404 Not Found: 9000 not found"),
+			},
+		}
+
+		for _, test := range tests {
+			_, err := ts.client.UpdateAppFirstDateSurpassed(testCtx, test.update)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				for _, appID := range test.update.ApplicationIDs {
+					application, err := ts.client.GetApplicationByID(testCtx, appID)
+					ts.NoError(err)
+					ts.Equal(test.expectedDate, application.FirstDateSurpassed)
+				}
+			}
+		}
+	})
+
+	ts.Run("Test_RemoveApplication", func() {
+		tests := []struct {
+			name           string
+			applicationID  string
+			expectedStatus types.AppStatus
+			err            error
+		}{
+			{
+				name:           "should remove one application by setting its status to AWAITING_GRACE_PERIOD",
+				applicationID:  "test_app_5hdf7sh23jd828",
+				expectedStatus: types.AwaitingGracePeriod,
+			},
+			{
+				name:          "Should fail if application cannot be found",
+				applicationID: "2348",
+				err:           fmt.Errorf("Response not OK. 404 Not Found: applications not found"),
+			},
+		}
+
+		for _, test := range tests {
+			_, err := ts.client.RemoveApplication(testCtx, test.applicationID)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				application, err := ts.client.GetApplicationByID(testCtx, test.applicationID)
+				ts.NoError(err)
+				ts.Equal(test.expectedStatus, application.Status)
+			}
+		}
+	})
+
+	ts.Run("Test_UpdateLoadBalancer", func() {
+		tests := []struct {
+			name                    string
+			loadBalancerID          string
+			loadBalancerUpdate      types.UpdateLoadBalancer
+			loadBalancerAfterUpdate types.LoadBalancer
+			err                     error
+		}{
+			{
+				name:           "Should update a single loadBalancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerUpdate: types.UpdateLoadBalancer{
+					Name: "pokt_app_updated",
+					StickyOptions: &types.UpdateStickyOptions{
+						Duration:      "100",
+						StickyOrigins: []string{"chrome-extension://", "test-ext://"},
+						StickyMax:     500,
+						Stickiness:    boolPointer(false),
+					},
+				},
+				loadBalancerAfterUpdate: types.LoadBalancer{
+					Name: "pokt_app_updated",
+					StickyOptions: types.StickyOptions{
+						Duration:      "100",
+						StickyOrigins: []string{"chrome-extension://", "test-ext://"},
+						StickyMax:     500,
+						Stickiness:    false,
+					},
+				},
+			},
+			{
+				name:           "Should update only the name of a single loadBalancer in the DB",
+				loadBalancerID: "test_lb_3890ru23jfi32fj",
+				loadBalancerUpdate: types.UpdateLoadBalancer{
+					Name: "pokt_app_updated_2",
+				},
+				loadBalancerAfterUpdate: types.LoadBalancer{
+					Name: "pokt_app_updated_2",
+					StickyOptions: types.StickyOptions{
+						Duration:      "40",
+						StickyOrigins: []string{"chrome-extension://"},
+						StickyMax:     400,
+						Stickiness:    true,
+					},
+				},
+			},
+			{
+				name:           "Should fail if load balancer cannot be found",
+				loadBalancerID: "9000",
+				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+			},
+		}
+
+		for _, test := range tests {
+			createdLB, err := ts.client.UpdateLoadBalancer(testCtx, test.loadBalancerID, test.loadBalancerUpdate)
+			ts.Equal(test.err, err)
+			if err == nil {
+				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, createdLB.ID)
+				ts.Equal(test.err, err)
+				ts.Equal(test.loadBalancerAfterUpdate.Name, loadBalancer.Name)
+				ts.Equal(test.loadBalancerAfterUpdate.StickyOptions, loadBalancer.StickyOptions)
+			}
+		}
+	})
+
+	ts.Run("Test_RemoveLoadBalancer", func() {
+		tests := []struct {
+			name           string
+			loadBalancerID string
+			expectedUserID string
+			err            error
+		}{
+			{
+				name:           "should remove one load balancer by setting its user ID to an empty string",
+				loadBalancerID: "test_lb_3890ru23jfi32fj",
+				expectedUserID: "",
+			},
+			{
+				name:           "Should fail if load balancer cannot be found",
+				loadBalancerID: "9000",
+				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+			},
+		}
+
+		for _, test := range tests {
+			_, err := ts.client.RemoveLoadBalancer(testCtx, test.loadBalancerID)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+				ts.NoError(err)
+				ts.Equal(test.expectedUserID, loadBalancer.UserID)
+			}
+		}
+	})
 }
-
-// func (ts *DBClientTestSuite) Test_CreateRedirect() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		redirect, err := ts.client.CreateRedirect(testCtx)
-// 	}
-// }
-
-// func (ts *DBClientTestSuite) Test_CreateApplication() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		application, err := ts.client.CreateApplication(testCtx)
-// 	}
-// }
-
-// func (ts *DBClientTestSuite) Test_CreateLoadBalancer() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		loadBalancer, err := ts.client.CreateLoadBalancer(testCtx)
-// 	}
-// }
-
-// func (ts *DBClientTestSuite) Test_ActivateBlockchain() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		blockchain, err := ts.client.ActivateBlockchain(testCtx)
-// 	}
-// }
-
-// func (ts *DBClientTestSuite) Test_UpdateApplication() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		application, err := ts.client.UpdateApplication(testCtx)
-// 	}
-// }
-
-// func (ts *DBClientTestSuite) Test_UpdateAppFirstDateSurpassed() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		appFirstDateSurpassed, err := ts.client.UpdateAppFirstDateSurpassed(testCtx)
-// 	}
-// }
-
-// func (ts *DBClientTestSuite) Test_RemoveApplication() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		application, err := ts.client.RemoveApplication(testCtx)
-// 	}
-// }
-
-// func (ts *DBClientTestSuite) Test_UpdateLoadBalancer() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		loadBalancer, err := ts.client.UpdateLoadBalancer(testCtx)
-// 	}
-// }
-
-// func (ts *DBClientTestSuite) Test_RemoveLoadBalancer() {
-// 	tests := []struct {
-// 		name string
-// 		err  error
-// 	}{
-// 		{},
-// 	}
-
-// 	for _, test := range tests {
-// 		loadBalancers, err := ts.client.RemoveLoadBalancer(testCtx)
-// 	}
-// }

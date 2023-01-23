@@ -5,7 +5,9 @@ services:
   pocket-http-db:
     # TO DO - change to master once v1 PR merged
     # build: github.com/pokt-foundation/pocket-http-db.git#master
-    build: github.com/pokt-foundation/pocket-http-db.git#v1-endpoints-db-driver
+    # build: github.com/pokt-foundation/pocket-http-db.git#v1-endpoints-db-driver
+    build:
+      context: ../pocket-http-db
     container_name: pocket-http-db
     restart: always
     ports:

@@ -39,7 +39,7 @@ type (
 	// IDBReader interface contains read-only methods for interacting with the Pocket HTTP DB
 	IDBReader interface {
 		GetBlockchains(ctx context.Context) ([]*types.Blockchain, error)
-		GetBlockchain(ctx context.Context, blockchainID string) (*types.Blockchain, error)
+		GetBlockchainByID(ctx context.Context, blockchainID string) (*types.Blockchain, error)
 		GetApplications(ctx context.Context) ([]*types.Application, error)
 		GetApplicationByID(ctx context.Context, applicationID string) (*types.Application, error)
 		GetApplicationsByUserID(ctx context.Context, userID string) ([]*types.Application, error)
@@ -52,7 +52,7 @@ type (
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
 		CreateBlockchain(ctx context.Context, blockchain types.Blockchain) (*types.Blockchain, error)
-		CreateRedirect(ctx context.Context, redirect types.Redirect) (*types.Redirect, error)
+		CreateBlockchainRedirect(ctx context.Context, redirect types.Redirect) (*types.Redirect, error)
 		CreateApplication(ctx context.Context, application types.Application) (*types.Application, error)
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
@@ -82,10 +82,12 @@ const (
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
 const (
+	V0 APIVersion = "" // TODO remove when dropping v0 support
 	V1 APIVersion = "v1"
 )
 
 var ValidAPIVersions = map[APIVersion]bool{
+	V0: true, // TODO remove when dropping v0 support
 	V1: true,
 }
 
@@ -104,9 +106,10 @@ var (
 	errInvalidBlockchainJSON   error = errors.New("invalid blockchain JSON")
 	errInvalidAppJSON          error = errors.New("invalid application JSON")
 	errInvalidLoadBalancerJSON error = errors.New("invalid load balancer JSON")
+	errInvalidActivationJSON   error = errors.New("invalid active field JSON")
 
 	errResponseNotOK             error = errors.New("Response not OK")
-	errUnableToParseErrorMessage error = errors.New("unable to parse error message from response")
+	errUnableToParseErrorMessage error = errors.New("unable to parse error message from error response")
 )
 
 // NewDBClient returns an HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
@@ -146,6 +149,10 @@ func (c Config) validateConfig() error {
 
 // versionedBasePath returns the base path for a given data type eg. `https://pocket.http-db-url.com/v1/application`
 func (db *DBClient) versionedBasePath(dataTypePath basePath) string {
+	if db.config.version == V0 { // TODO remove when dropping v0 support
+		return fmt.Sprintf("%s/%s", db.config.baseURL, dataTypePath)
+	}
+
 	return fmt.Sprintf("%s/%s/%s", db.config.baseURL, db.config.version, dataTypePath)
 }
 
@@ -170,7 +177,7 @@ func (db *DBClient) GetBlockchains(ctx context.Context) ([]*types.Blockchain, er
 }
 
 // GetBlockchain returns a single Blockchain by its relay chain ID - GET `<base URL>/<version>/blockchain/{id}`
-func (db *DBClient) GetBlockchain(ctx context.Context, blockchainID string) (*types.Blockchain, error) {
+func (db *DBClient) GetBlockchainByID(ctx context.Context, blockchainID string) (*types.Blockchain, error) {
 	if blockchainID == "" {
 		return nil, errNoBlockchainID
 	}
@@ -278,7 +285,12 @@ func (db *DBClient) CreateBlockchainRedirect(ctx context.Context, redirect types
 		return nil, fmt.Errorf("%w: %s", errInvalidAppJSON, err)
 	}
 
-	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), redirectPath)
+	var endpoint string
+	if db.config.version == V0 { // TODO remove when dropping v0 support
+		endpoint = db.versionedBasePath(basePath(redirectPath))
+	} else {
+		endpoint = fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), redirectPath)
+	}
 
 	return post[*types.Redirect](endpoint, db.getAuthHeaderForWrite(), redirectJSON, db.httpClient)
 }
@@ -313,11 +325,14 @@ func (db *DBClient) ActivateBlockchain(ctx context.Context, blockchainID string,
 		return false, errNoBlockchainID
 	}
 
-	activeJSON, _ := json.Marshal(active)
+	activeJSON, err := json.Marshal(active)
+	if err != nil {
+		return false, fmt.Errorf("%w: %s", errInvalidActivationJSON, err)
+	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(blockchainPath), blockchainID, activatePath)
 
-	return put[bool](endpoint, db.getAuthHeaderForWrite(), activeJSON, db.httpClient)
+	return post[bool](endpoint, db.getAuthHeaderForWrite(), activeJSON, db.httpClient)
 }
 
 // UpdateApplication updates a single Application in the DB - PUT `<base URL>/<version>/application/{id}`
@@ -345,16 +360,16 @@ func (db *DBClient) UpdateAppFirstDateSurpassed(ctx context.Context, updateInput
 
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(applicationPath), firstDateSurpassedPath)
 
-	return put[[]*types.Application](endpoint, db.getAuthHeaderForWrite(), firstDateSurpassedJSON, db.httpClient)
+	return post[[]*types.Application](endpoint, db.getAuthHeaderForWrite(), firstDateSurpassedJSON, db.httpClient)
 }
 
 // UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
-func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, name string) (*types.LoadBalancer, error) {
+func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error) {
 	if id == "" {
 		return nil, errNoLoadBalancerID
 	}
 
-	loadBalancerUpdateJSON, err := json.Marshal(types.UpdateLoadBalancer{Name: name})
+	loadBalancerUpdateJSON, err := json.Marshal(lbUpdate)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidLoadBalancerJSON, err)
 	}
@@ -409,7 +424,7 @@ func get[T any](endpoint string, header http.Header, httpClient *httpclient.Clie
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return data, returnErrorResponse(response)
+		return data, parseErrorResponse(response)
 	}
 
 	body, err := io.ReadAll(response.Body)
@@ -438,7 +453,7 @@ func post[T any](endpoint string, header http.Header, postData []byte, httpClien
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return data, returnErrorResponse(response)
+		return data, parseErrorResponse(response)
 	}
 
 	body, err := io.ReadAll(response.Body)
@@ -467,7 +482,7 @@ func put[T any](endpoint string, header http.Header, postData []byte, httpClient
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return data, returnErrorResponse(response)
+		return data, parseErrorResponse(response)
 	}
 
 	body, err := io.ReadAll(response.Body)
@@ -483,23 +498,30 @@ func put[T any](endpoint string, header http.Header, postData []byte, httpClient
 	return data, nil
 }
 
-// Returns the status code along with the error response
-func returnErrorResponse(errResponse *http.Response) error {
+// Parses the error reponse and returns the status code and error message
+func parseErrorResponse(errResponse *http.Response) error {
+	code := errResponse.StatusCode
+	text := http.StatusText(code)
+
 	body, err := io.ReadAll(errResponse.Body)
 	if err != nil {
 		return err
 	}
 
 	var errorMap map[string]string
-
 	err = json.Unmarshal(body, &errorMap)
 	if err != nil {
 		return err
 	}
 
+	var errString string
 	if errorMessage, ok := errorMap["error"]; ok {
-		return fmt.Errorf("%s. %d %s: %s", errResponseNotOK, errResponse.StatusCode, http.StatusText(errResponse.StatusCode), errorMessage)
+		errString = errorMessage
+	} else {
+		errString = errUnableToParseErrorMessage.Error()
 	}
 
-	return errUnableToParseErrorMessage
+	return fmt.Errorf(
+		"%s. %d %s: %s", errResponseNotOK, code, text, errString,
+	)
 }

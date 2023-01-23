@@ -9,7 +9,7 @@ gen_writer:
 
 test: test_env_up run_client_tests test_env_down
 test_env_up:
-	docker-compose -f ./docker-compose.test.yml up -d --remove-orphans;
+	docker-compose -f ./docker-compose.test.yml up -d --remove-orphans --build;
 	sleep 2;
 test_env_down:
 	docker-compose -f ./docker-compose.test.yml down --remove-orphans -v

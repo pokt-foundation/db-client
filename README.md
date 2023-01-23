@@ -25,7 +25,7 @@ This client will automatically publish when a Pull Request is merged to the `mai
 
 # Development
 
-This client should be updated to reflect any changes to PHD endpoints, published and then the necessary repos updated.
+This client should be updated to reflect any changes to PHD endpoints (including updating the tests file), published and then the necessary repos updated.
 
 ## Pre-Commit Installation
 
