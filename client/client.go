@@ -25,8 +25,8 @@ type (
 	}
 	// Config struct to provide config options
 	Config struct {
-		baseURL, apiKey string
-		version         APIVersion
+		BaseURL, APIKey string
+		Version         APIVersion
 		retries         int
 		timeout         time.Duration
 	}
@@ -132,16 +132,16 @@ func NewDBClient(config Config) (*DBClient, error) {
 
 // validateConfig ensures that a valid configuration is provided to the DB client
 func (c Config) validateConfig() error {
-	if c.baseURL == "" {
+	if c.BaseURL == "" {
 		return errBaseURLNotProvided
 	}
-	if c.apiKey == "" {
+	if c.APIKey == "" {
 		return errAPIKeyNotProvided
 	}
-	if c.version == "" {
+	if c.Version == "" {
 		return errVersionNotProvided
 	}
-	if !ValidAPIVersions[c.version] {
+	if !ValidAPIVersions[c.Version] {
 		return errInvalidVersionProvided
 	}
 	return nil
@@ -149,22 +149,21 @@ func (c Config) validateConfig() error {
 
 // versionedBasePath returns the base path for a given data type eg. `https://pocket.http-db-url.com/v1/application`
 func (db *DBClient) versionedBasePath(dataTypePath basePath) string {
-	if db.config.version == V0 { // TODO remove when dropping v0 support
-		return fmt.Sprintf("%s/%s", db.config.baseURL, dataTypePath)
+	if db.config.Version == V0 { // TODO remove when dropping v0 support
+		return fmt.Sprintf("%s/%s", db.config.BaseURL, dataTypePath)
 	}
 
-	return fmt.Sprintf("%s/%s/%s", db.config.baseURL, db.config.version, dataTypePath)
+	return fmt.Sprintf("%s/%s/%s", db.config.BaseURL, db.config.Version, dataTypePath)
 }
 
 // getAuthHeaderForRead returns the auth header for read operations to PHD
 func (db *DBClient) getAuthHeaderForRead() http.Header {
-	return http.Header{"Authorization": {db.config.apiKey}}
+	return http.Header{"Authorization": {db.config.APIKey}}
 }
 
 // getAuthHeaderForRead returns the auth header for write operations to PHD
 func (db *DBClient) getAuthHeaderForWrite() http.Header {
-	return http.Header{"Authorization": {db.config.apiKey}, "Content-Type": {"application/json"}}
-	// "Connection":    {"Close"}, // TODO - IS THIS NEEDED?
+	return http.Header{"Authorization": {db.config.APIKey}, "Content-Type": {"application/json"}}
 }
 
 /* -- Read Methods -- */
@@ -286,7 +285,7 @@ func (db *DBClient) CreateBlockchainRedirect(ctx context.Context, redirect types
 	}
 
 	var endpoint string
-	if db.config.version == V0 { // TODO remove when dropping v0 support
+	if db.config.Version == V0 { // TODO remove when dropping v0 support
 		endpoint = db.versionedBasePath(basePath(redirectPath))
 	} else {
 		endpoint = fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), redirectPath)

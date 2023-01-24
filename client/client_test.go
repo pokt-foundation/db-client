@@ -35,9 +35,9 @@ func (ts *DBClientTestSuite) SetupSuite() {
 // Initializes
 func (ts *DBClientTestSuite) initDBClient() error {
 	config := Config{
-		baseURL: "http://localhost:8080",
-		apiKey:  "test_api_key_6789",
-		version: V1,
+		BaseURL: "http://localhost:8080",
+		APIKey:  "test_api_key_6789",
+		Version: V1,
 		retries: 1,
 		timeout: 10 * time.Second,
 	}
