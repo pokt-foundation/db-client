@@ -6,6 +6,7 @@ require (
 	github.com/gojek/heimdall/v7 v7.0.2
 	github.com/gojektech/heimdall v5.0.2+incompatible
 	github.com/pokt-foundation/portal-db v1.5.0
+	github.com/stretchr/testify v1.8.1
 )
 
 require (
@@ -14,6 +15,5 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
