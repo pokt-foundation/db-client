@@ -27,8 +27,8 @@ type (
 	Config struct {
 		BaseURL, APIKey string
 		Version         APIVersion
-		retries         int
-		timeout         time.Duration
+		Retries         int
+		Timeout         time.Duration
 	}
 
 	// IDBClient interface contains all read & write methods to interact with the Pocket HTTP DB
@@ -82,7 +82,7 @@ const (
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
 const (
-	V0 APIVersion = "" // TODO remove when dropping v0 support
+	V0 APIVersion = "v0" // TODO remove when dropping v0 support
 	V1 APIVersion = "v1"
 )
 
@@ -122,8 +122,8 @@ func NewDBClient(config Config) (*DBClient, error) {
 	retrier := heimdall.NewRetrier(backoff)
 
 	httpClient := httpclient.NewClient(
-		httpclient.WithHTTPTimeout(config.timeout),
-		httpclient.WithRetryCount(config.retries),
+		httpclient.WithHTTPTimeout(config.Timeout),
+		httpclient.WithRetryCount(config.Retries),
 		httpclient.WithRetrier(retrier),
 	)
 
