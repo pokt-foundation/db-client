@@ -59,7 +59,7 @@ type (
 		UpdateApplication(ctx context.Context, id string, update types.UpdateApplication) (*types.Application, error)
 		UpdateAppFirstDateSurpassed(ctx context.Context, updateInput types.UpdateFirstDateSurpassed) ([]*types.Application, error)
 		RemoveApplication(ctx context.Context, id string) (*types.Application, error)
-		UpdateLoadBalancer(ctx context.Context, id string, name string) (*types.LoadBalancer, error)
+		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
 		RemoveLoadBalancer(ctx context.Context, id string) (*types.LoadBalancer, error)
 	}
 
@@ -112,22 +112,34 @@ var (
 	errUnableToParseErrorMessage error = errors.New("unable to parse error message from error response")
 )
 
-// NewDBClient returns an HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
-func NewDBClient(config Config) (*DBClient, error) {
+// NewDBClient returns a read-write HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
+func NewDBClient(config Config) (IDBClient, error) {
 	if err := config.validateConfig(); err != nil {
 		return nil, err
 	}
 
+	return &DBClient{httpClient: newHTTPClient(config), config: config}, nil
+}
+
+// NewReadOnlyDBClient returns a read-only HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
+func NewReadOnlyDBClient(config Config) (IDBReader, error) {
+	if err := config.validateConfig(); err != nil {
+		return nil, err
+	}
+
+	return &DBClient{httpClient: newHTTPClient(config), config: config}, nil
+}
+
+// newHTTPClient creates a new heimdall HTTP client with retries and exponential backoff
+func newHTTPClient(config Config) *httpclient.Client {
 	backoff := heimdall.NewExponentialBackoff(2*time.Millisecond, 9*time.Millisecond, 2, 2*time.Millisecond)
 	retrier := heimdall.NewRetrier(backoff)
 
-	httpClient := httpclient.NewClient(
+	return httpclient.NewClient(
 		httpclient.WithHTTPTimeout(config.timeout),
 		httpclient.WithRetryCount(config.retries),
 		httpclient.WithRetrier(retrier),
 	)
-
-	return &DBClient{httpClient: httpClient, config: config}, nil
 }
 
 // validateConfig ensures that a valid configuration is provided to the DB client
