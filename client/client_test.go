@@ -38,8 +38,8 @@ func (ts *DBClientTestSuite) initDBClient() error {
 		BaseURL: "http://localhost:8080",
 		APIKey:  "test_api_key_6789",
 		Version: V1,
-		retries: 1,
-		timeout: 10 * time.Second,
+		Retries: 1,
+		Timeout: 10 * time.Second,
 	}
 
 	client, err := NewDBClient(config)
