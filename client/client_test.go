@@ -18,7 +18,7 @@ var (
 
 type DBClientTestSuite struct {
 	suite.Suite
-	client *DBClient
+	client IDBClient
 	mu     sync.Mutex
 }
 
