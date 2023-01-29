@@ -83,8 +83,8 @@ func (_m *MockIDBReader) GetApplicationsByUserID(ctx context.Context, userID str
 	return r0, r1
 }
 
-// GetBlockchain provides a mock function with given fields: ctx, blockchainID
-func (_m *MockIDBReader) GetBlockchain(ctx context.Context, blockchainID string) (*types.Blockchain, error) {
+// GetBlockchainByID provides a mock function with given fields: ctx, blockchainID
+func (_m *MockIDBReader) GetBlockchainByID(ctx context.Context, blockchainID string) (*types.Blockchain, error) {
 	ret := _m.Called(ctx, blockchainID)
 
 	var r0 *types.Blockchain
