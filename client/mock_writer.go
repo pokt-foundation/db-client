@@ -81,6 +81,29 @@ func (_m *MockIDBWriter) CreateBlockchain(ctx context.Context, blockchain types.
 	return r0, r1
 }
 
+// CreateBlockchainRedirect provides a mock function with given fields: ctx, redirect
+func (_m *MockIDBWriter) CreateBlockchainRedirect(ctx context.Context, redirect types.Redirect) (*types.Redirect, error) {
+	ret := _m.Called(ctx, redirect)
+
+	var r0 *types.Redirect
+	if rf, ok := ret.Get(0).(func(context.Context, types.Redirect) *types.Redirect); ok {
+		r0 = rf(ctx, redirect)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Redirect)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, types.Redirect) error); ok {
+		r1 = rf(ctx, redirect)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateLoadBalancer provides a mock function with given fields: ctx, loadBalancer
 func (_m *MockIDBWriter) CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error) {
 	ret := _m.Called(ctx, loadBalancer)
@@ -97,29 +120,6 @@ func (_m *MockIDBWriter) CreateLoadBalancer(ctx context.Context, loadBalancer ty
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, types.LoadBalancer) error); ok {
 		r1 = rf(ctx, loadBalancer)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// CreateRedirect provides a mock function with given fields: ctx, redirect
-func (_m *MockIDBWriter) CreateRedirect(ctx context.Context, redirect types.Redirect) (*types.Redirect, error) {
-	ret := _m.Called(ctx, redirect)
-
-	var r0 *types.Redirect
-	if rf, ok := ret.Get(0).(func(context.Context, types.Redirect) *types.Redirect); ok {
-		r0 = rf(ctx, redirect)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.Redirect)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, types.Redirect) error); ok {
-		r1 = rf(ctx, redirect)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -219,13 +219,13 @@ func (_m *MockIDBWriter) UpdateApplication(ctx context.Context, id string, updat
 	return r0, r1
 }
 
-// UpdateLoadBalancer provides a mock function with given fields: ctx, id, name
-func (_m *MockIDBWriter) UpdateLoadBalancer(ctx context.Context, id string, name string) (*types.LoadBalancer, error) {
-	ret := _m.Called(ctx, id, name)
+// UpdateLoadBalancer provides a mock function with given fields: ctx, id, lbUpdate
+func (_m *MockIDBWriter) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error) {
+	ret := _m.Called(ctx, id, lbUpdate)
 
 	var r0 *types.LoadBalancer
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *types.LoadBalancer); ok {
-		r0 = rf(ctx, id, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.UpdateLoadBalancer) *types.LoadBalancer); ok {
+		r0 = rf(ctx, id, lbUpdate)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.LoadBalancer)
@@ -233,8 +233,8 @@ func (_m *MockIDBWriter) UpdateLoadBalancer(ctx context.Context, id string, name
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, id, name)
+	if rf, ok := ret.Get(1).(func(context.Context, string, types.UpdateLoadBalancer) error); ok {
+		r1 = rf(ctx, id, lbUpdate)
 	} else {
 		r1 = ret.Error(1)
 	}
