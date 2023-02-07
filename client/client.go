@@ -55,12 +55,15 @@ type (
 		CreateBlockchainRedirect(ctx context.Context, redirect types.Redirect) (*types.Redirect, error)
 		CreateApplication(ctx context.Context, application types.Application) (*types.Application, error)
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
+		CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error)
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
 		UpdateApplication(ctx context.Context, id string, update types.UpdateApplication) (*types.Application, error)
 		UpdateAppFirstDateSurpassed(ctx context.Context, updateInput types.UpdateFirstDateSurpassed) ([]*types.Application, error)
 		RemoveApplication(ctx context.Context, id string) (*types.Application, error)
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
+		UpdateLoadBalancerUserRole(ctx context.Context, id string, userUpdate types.UpdateUserAccess) (*types.LoadBalancer, error)
 		RemoveLoadBalancer(ctx context.Context, id string) (*types.LoadBalancer, error)
+		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
 	}
 
 	basePath   string
@@ -324,6 +327,18 @@ func (db *DBClient) CreateLoadBalancer(ctx context.Context, loadBalancer types.L
 	return post[*types.LoadBalancer](db.versionedBasePath(loadBalancerPath), db.getAuthHeaderForWrite(), loadBalancerJSON, db.httpClient)
 }
 
+// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
+func (db *DBClient) CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error) {
+	loadBalancerUserJSON, err := json.Marshal(user)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidLoadBalancerJSON, err)
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath)
+
+	return post[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUserJSON, db.httpClient)
+}
+
 /* -- Update Methods -- */
 
 // ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
@@ -386,6 +401,22 @@ func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate 
 	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUpdateJSON, db.httpClient)
 }
 
+// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
+func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, id string, userUpdate types.UpdateUserAccess) (*types.LoadBalancer, error) {
+	if id == "" {
+		return nil, errNoLoadBalancerID
+	}
+
+	loadBalancerUserUpdateJSON, err := json.Marshal(userUpdate)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidLoadBalancerJSON, err)
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), id, userPath)
+
+	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUserUpdateJSON, db.httpClient)
+}
+
 // RemoveApplication removes a single Application by updating its status field - PUT `<base URL>/<version>/application/{id}` with Remove: true
 func (db *DBClient) RemoveApplication(ctx context.Context, id string) (*types.Application, error) {
 	if id == "" {
@@ -416,6 +447,22 @@ func (db *DBClient) RemoveLoadBalancer(ctx context.Context, id string) (*types.L
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(loadBalancerPath), id)
 
 	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerRemoveJSON, db.httpClient)
+}
+
+/* -- Delete Methods -- */
+
+// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}` with Remove: true
+func (db *DBClient) DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error) {
+	if loadBalancerID == "" {
+		return nil, errNoLoadBalancerID
+	}
+	if userID == "" {
+		return nil, errNoUserID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath, userID)
+
+	return delete[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), db.httpClient)
 }
 
 /* -- PHD Client HTTP Funcs -- */
@@ -483,6 +530,33 @@ func put[T any](endpoint string, header http.Header, postData []byte, httpClient
 	postBody := bytes.NewBufferString(string(postData))
 
 	response, err := httpClient.Put(endpoint, postBody, header)
+	if err != nil {
+		return data, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return data, parseErrorResponse(response)
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return data, err
+	}
+
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return data, err
+	}
+
+	return data, nil
+}
+
+// Generic HTTP DELETE request
+func delete[T any](endpoint string, header http.Header, httpClient *httpclient.Client) (T, error) {
+	var data T
+
+	response, err := httpClient.Delete(endpoint, header)
 	if err != nil {
 		return data, err
 	}
