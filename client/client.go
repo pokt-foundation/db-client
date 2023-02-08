@@ -45,7 +45,7 @@ type (
 		GetApplicationsByUserID(ctx context.Context, userID string) ([]*types.Application, error)
 		GetLoadBalancers(ctx context.Context) ([]*types.LoadBalancer, error)
 		GetLoadBalancerByID(ctx context.Context, loadBalancerID string) (*types.LoadBalancer, error)
-		GetLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error)
+		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 	}
@@ -108,6 +108,7 @@ var (
 	errInvalidAppJSON          error = errors.New("invalid application JSON")
 	errInvalidLoadBalancerJSON error = errors.New("invalid load balancer JSON")
 	errInvalidActivationJSON   error = errors.New("invalid active field JSON")
+	errInvalidRoleNameFilter   error = errors.New("invalid role name filter")
 	errResponseNotOK           error = errors.New("Response not OK")
 )
 
@@ -246,12 +247,23 @@ func (db *DBClient) GetLoadBalancerByID(ctx context.Context, loadBalancerID stri
 }
 
 // GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`
-func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error) {
+// This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
+func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(userPath), userID, loadBalancerPath)
+
+	if roleNameFilter != nil {
+		filter := *roleNameFilter
+
+		if !types.ValidRoleNames[filter] {
+			return nil, errInvalidRoleNameFilter
+		}
+
+		endpoint = fmt.Sprintf("%s?filter=%s", endpoint, filter)
+	}
 
 	return get[[]*types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
