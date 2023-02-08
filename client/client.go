@@ -38,32 +38,49 @@ type (
 	}
 	// IDBReader interface contains read-only methods for interacting with the Pocket HTTP DB
 	IDBReader interface {
+		// GetBlockchains returns all blockchains in the DB - GET `<base URL>/<version>/blockchain`
 		GetBlockchains(ctx context.Context) ([]*types.Blockchain, error)
+		// GetBlockchainByID returns a single Blockchain by its relay chain ID - GET `<base URL>/<version>/blockchain/{id}`
 		GetBlockchainByID(ctx context.Context, blockchainID string) (*types.Blockchain, error)
+		// GetApplications returns all Applications in the DB - GET `<base URL>/<version>/application`
 		GetApplications(ctx context.Context) ([]*types.Application, error)
+		// GetApplicationByID returns a single Application by its ID - GET `<base URL>/<version>/application/{id}`
 		GetApplicationByID(ctx context.Context, applicationID string) (*types.Application, error)
+		// GetApplicationsByUserID returns all the Applications for a user - GET `<base URL>/<version>/user/{userID}/application`
 		GetApplicationsByUserID(ctx context.Context, userID string) ([]*types.Application, error)
+		// GetLoadBalancers returns all Load Balancers in the DB - GET `<base URL>/<version>/load_balancer`
 		GetLoadBalancers(ctx context.Context) ([]*types.LoadBalancer, error)
+		// GetLoadBalancerByID returns a single Load Balancer by its ID - GET `<base URL>/<version>/load_balancer/{id}`
 		GetLoadBalancerByID(ctx context.Context, loadBalancerID string) (*types.LoadBalancer, error)
-		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
+		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`
+		GetLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error)
+		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
+		// GetPayPlanByType returns a single Pay Plan by its type - GET `<base URL>/<version>/pay_plan/{type}`
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
+		// CreateBlockchain creates a single Blockchain in the DB - POST `<base URL>/<version>/blockchain`
 		CreateBlockchain(ctx context.Context, blockchain types.Blockchain) (*types.Blockchain, error)
+		// CreateBlockchainRedirect creates a single Blockchain Redirect in the DB - POST `<base URL>/<version>/blockchain/redirect`
 		CreateBlockchainRedirect(ctx context.Context, redirect types.Redirect) (*types.Redirect, error)
+		// CreateApplication creates a single Application in the DB - POST `<base URL>/<version>/application`
 		CreateApplication(ctx context.Context, application types.Application) (*types.Application, error)
+		// CreateLoadBalancer creates a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer`
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
-		CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error)
+		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
+		// UpdateApplication updates a single Application in the DB - PUT `<base URL>/<version>/application/{id}`
 		UpdateApplication(ctx context.Context, id string, update types.UpdateApplication) (*types.Application, error)
+		// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - PUT `<base URL>/<version>/first_date_surpassed`
 		UpdateAppFirstDateSurpassed(ctx context.Context, updateInput types.UpdateFirstDateSurpassed) ([]*types.Application, error)
+		// RemoveApplication removes a single Application by updating its status field - PUT `<base URL>/<version>/application/{id}` with Remove: true
 		RemoveApplication(ctx context.Context, id string) (*types.Application, error)
+		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
-		UpdateLoadBalancerUserRole(ctx context.Context, id string, userUpdate types.UpdateUserAccess) (*types.LoadBalancer, error)
+		// RemoveLoadBalancer removes a single LoadBalancer by updating its user field to null - PUT `<base URL>/<version>/load_balancer/{id}` with Remove: true
 		RemoveLoadBalancer(ctx context.Context, id string) (*types.LoadBalancer, error)
-		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
 	}
 
 	basePath   string
@@ -187,7 +204,7 @@ func (db *DBClient) GetBlockchains(ctx context.Context) ([]*types.Blockchain, er
 	return get[[]*types.Blockchain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetBlockchain returns a single Blockchain by its relay chain ID - GET `<base URL>/<version>/blockchain/{id}`
+// GetBlockchainByID returns a single Blockchain by its relay chain ID - GET `<base URL>/<version>/blockchain/{id}`
 func (db *DBClient) GetBlockchainByID(ctx context.Context, blockchainID string) (*types.Blockchain, error) {
 	if blockchainID == "" {
 		return nil, errNoBlockchainID
