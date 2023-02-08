@@ -53,7 +53,7 @@ type (
 		// GetLoadBalancerByID returns a single Load Balancer by its ID - GET `<base URL>/<version>/load_balancer/{id}`
 		GetLoadBalancerByID(ctx context.Context, loadBalancerID string) (*types.LoadBalancer, error)
 		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`
-		GetLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error)
+		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
 		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
 		// GetPayPlanByType returns a single Pay Plan by its type - GET `<base URL>/<version>/pay_plan/{type}`
@@ -69,6 +69,8 @@ type (
 		CreateApplication(ctx context.Context, application types.Application) (*types.Application, error)
 		// CreateLoadBalancer creates a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer`
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
+		// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
+		CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error)
 		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
 		// UpdateApplication updates a single Application in the DB - PUT `<base URL>/<version>/application/{id}`
@@ -79,8 +81,12 @@ type (
 		RemoveApplication(ctx context.Context, id string) (*types.Application, error)
 		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
+		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
+		UpdateLoadBalancerUserRole(ctx context.Context, id string, userUpdate types.UpdateUserAccess) (*types.LoadBalancer, error)
 		// RemoveLoadBalancer removes a single LoadBalancer by updating its user field to null - PUT `<base URL>/<version>/load_balancer/{id}` with Remove: true
 		RemoveLoadBalancer(ctx context.Context, id string) (*types.LoadBalancer, error)
+		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}` with Remove: true
+		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
 	}
 
 	basePath   string
