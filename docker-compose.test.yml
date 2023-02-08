@@ -5,7 +5,7 @@ services:
   pocket-http-db:
     # TO DO - change to master once v1 PR merged
     # build: github.com/pokt-foundation/pocket-http-db.git#master
-    build: github.com/pokt-foundation/pocket-http-db.git#update-v1-to-user-access
+    build: github.com/pokt-foundation/pocket-http-db.git#v1-filter-lbs-by-role
     container_name: pocket-http-db
     restart: always
     ports:
