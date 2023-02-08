@@ -3,7 +3,10 @@ version: "3"
 
 services:
   pocket-http-db:
-    build: github.com/pokt-foundation/pocket-http-db.git#master
+  # 1. Set to Master once PHD E2E test updated to include latest DB client version changes
+    # build: github.com/pokt-foundation/pocket-http-db.git#master
+  # 2. Set to <BRANCH NAME> when incorporating latest changes to PHD client from a PHD feature branch
+    build: github.com/pokt-foundation/pocket-http-db.git#user-permissions
     container_name: pocket-http-db
     restart: always
     ports:

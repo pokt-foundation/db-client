@@ -831,6 +831,55 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			ts.Equal(test.expectedPayPlan, payPlanByType)
 		}
 	})
+
+	ts.Run("Test_GetUserPermissionsByUserID", func() {
+		tests := []struct {
+			name                string
+			userID              types.UserID
+			expectedPermissions types.UserPermissions
+			err                 error
+		}{
+			{
+
+				name:   "Should fetch a single users load balancer permissions",
+				userID: "test_user_1dbffbdfeeb225",
+				expectedPermissions: types.UserPermissions{
+					UserID: "test_user_1dbffbdfeeb225",
+					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{
+						"test_lb_34987u329rfn23f": {
+							RoleName:    types.RoleOwner,
+							Permissions: []types.PermissionsEnum{types.ReadEndpoint, types.WriteEndpoint},
+						},
+					},
+				},
+			},
+			{
+
+				name:   "Should fetch another single users load balancer permissions",
+				userID: "test_user_member1234",
+				expectedPermissions: types.UserPermissions{
+					UserID: "test_user_member1234",
+					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{
+						"test_lb_34987u329rfn23f": {
+							RoleName:    types.RoleMember,
+							Permissions: []types.PermissionsEnum{types.ReadEndpoint},
+						},
+					},
+				},
+			},
+			{
+				name:   "Should fail is the user does not have any permissions",
+				userID: "test_user_hey_who_am_i_wow",
+				err:    fmt.Errorf("Response not OK. 404 Not Found: no permissions found for given user ID"),
+			},
+		}
+
+		for _, test := range tests {
+			permissionsByUserID, err := ts.client.GetUserPermissionsByUserID(testCtx, test.userID)
+			ts.Equal(test.err, err)
+			ts.Equal(test.expectedPermissions, permissionsByUserID)
+		}
+	})
 }
 
 // Runs all the write endpoint tests after the read tests
