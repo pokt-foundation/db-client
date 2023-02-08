@@ -3,9 +3,7 @@ version: "3"
 
 services:
   pocket-http-db:
-    # TO DO - change to master once v1 PR merged
-    # build: github.com/pokt-foundation/pocket-http-db.git#master
-    build: github.com/pokt-foundation/pocket-http-db.git#v1-filter-lbs-by-role
+    build: github.com/pokt-foundation/pocket-http-db.git#master
     container_name: pocket-http-db
     restart: always
     ports:
