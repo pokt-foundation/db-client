@@ -86,9 +86,11 @@ type (
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
 		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
 		UpdateLoadBalancerUserRole(ctx context.Context, id string, userUpdate types.UpdateUserAccess) (*types.LoadBalancer, error)
+		// AcceptLoadBalancerUser updates a single User's Accepted field to true for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/{userID}/accept`
+		AcceptLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
 		// RemoveLoadBalancer removes a single LoadBalancer by updating its user field to null - PUT `<base URL>/<version>/load_balancer/{id}` with Remove: true
 		RemoveLoadBalancer(ctx context.Context, id string) (*types.LoadBalancer, error)
-		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}` with Remove: true
+		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}`
 		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
 	}
 
@@ -108,6 +110,7 @@ const (
 	activatePath           subPath = "activate"
 	firstDateSurpassedPath subPath = "first_date_surpassed"
 	permissionPath         subPath = "permission"
+	acceptPath             subPath = "accept"
 )
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
@@ -465,6 +468,20 @@ func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, id string, u
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), id, userPath)
 
 	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUserUpdateJSON, db.httpClient)
+}
+
+// AcceptLoadBalancerUser updates a single User's Accepted field to true for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/{userID}/accept`
+func (db *DBClient) AcceptLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error) {
+	if loadBalancerID == "" {
+		return nil, errNoLoadBalancerID
+	}
+	if userID == "" {
+		return nil, errNoUserID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath, userID, acceptPath)
+
+	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), nil, db.httpClient)
 }
 
 // RemoveApplication removes a single Application by updating its status field - PUT `<base URL>/<version>/application/{id}` with Remove: true
