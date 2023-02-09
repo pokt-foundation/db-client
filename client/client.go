@@ -85,9 +85,9 @@ type (
 		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
 		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
-		UpdateLoadBalancerUserRole(ctx context.Context, id string, userUpdate types.UpdateUserAccess) (*types.LoadBalancer, error)
-		// AcceptLoadBalancerUser updates a single User's Accepted field to true for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/{userID}/accept`
-		AcceptLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
+		UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, userID string, roleName types.RoleName) (*types.LoadBalancer, error)
+		// AcceptLoadBalancerUser updates a single User's UserID and Accepted fields for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/accept`
+		AcceptLoadBalancerUser(ctx context.Context, email, loadBalancerID, userID string) (*types.LoadBalancer, error)
 		// RemoveLoadBalancer removes a single LoadBalancer by updating its user field to null - PUT `<base URL>/<version>/load_balancer/{id}` with Remove: true
 		RemoveLoadBalancer(ctx context.Context, id string) (*types.LoadBalancer, error)
 		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}`
@@ -132,12 +132,14 @@ var (
 	errNoUserID                error = errors.New("no user ID")
 	errNoBlockchainID          error = errors.New("no blockchain ID")
 	errNoApplicationID         error = errors.New("no application ID")
+	errNoEmail                 error = errors.New("no user email")
 	errNoLoadBalancerID        error = errors.New("no load balancer ID")
 	errNoPayPlanType           error = errors.New("no pay plan type")
 	errInvalidBlockchainJSON   error = errors.New("invalid blockchain JSON")
 	errInvalidAppJSON          error = errors.New("invalid application JSON")
 	errInvalidLoadBalancerJSON error = errors.New("invalid load balancer JSON")
 	errInvalidActivationJSON   error = errors.New("invalid active field JSON")
+	errInvalidRoleName         error = errors.New("invalid role name")
 	errInvalidRoleNameFilter   error = errors.New("invalid role name filter")
 	errResponseNotOK           error = errors.New("Response not OK")
 )
@@ -455,23 +457,35 @@ func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate 
 }
 
 // UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
-func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, id string, userUpdate types.UpdateUserAccess) (*types.LoadBalancer, error) {
-	if id == "" {
+func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID, userID string, roleName types.RoleName) (*types.LoadBalancer, error) {
+	if loadBalancerID == "" {
 		return nil, errNoLoadBalancerID
 	}
+	if userID == "" {
+		return nil, errNoUserID
+	}
+	if roleName == types.RoleName("") || !types.ValidRoleNames[roleName] {
+		return nil, errInvalidRoleName
+	}
 
-	loadBalancerUserUpdateJSON, err := json.Marshal(userUpdate)
+	loadBalancerUserUpdateJSON, err := json.Marshal(types.UpdateUserAccess{
+		UserID:   userID,
+		RoleName: roleName,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidLoadBalancerJSON, err)
 	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), id, userPath)
+	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath)
 
 	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUserUpdateJSON, db.httpClient)
 }
 
-// AcceptLoadBalancerUser updates a single User's Accepted field to true for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/{userID}/accept`
-func (db *DBClient) AcceptLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error) {
+// AcceptLoadBalancerUser updates a single User's UserID and Accepted fields for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/accept`
+func (db *DBClient) AcceptLoadBalancerUser(ctx context.Context, email, loadBalancerID, userID string) (*types.LoadBalancer, error) {
+	if email == "" {
+		return nil, errNoEmail
+	}
 	if loadBalancerID == "" {
 		return nil, errNoLoadBalancerID
 	}
@@ -479,9 +493,17 @@ func (db *DBClient) AcceptLoadBalancerUser(ctx context.Context, loadBalancerID, 
 		return nil, errNoUserID
 	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath, userID, acceptPath)
+	loadBalancerAcceptUserJSON, err := json.Marshal(types.UpdateUserAccess{
+		UserID: userID,
+		Email:  email,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidLoadBalancerJSON, err)
+	}
 
-	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), nil, db.httpClient)
+	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath, acceptPath)
+
+	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerAcceptUserJSON, db.httpClient)
 }
 
 // RemoveApplication removes a single Application by updating its status field - PUT `<base URL>/<version>/application/{id}` with Remove: true
