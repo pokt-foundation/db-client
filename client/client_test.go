@@ -473,7 +473,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						Applications: []*types.Application{nil},
 						Users: []types.UserAccess{
 							{RoleName: types.RoleOwner, UserID: "test_user_redirect233344", Email: "owner3@test.com", Accepted: true},
-							{RoleName: types.RoleMember, UserID: "test_user_member5678", Email: "member2@test.com", Accepted: false},
+							{RoleName: types.RoleMember, UserID: "", Email: "member2@test.com", Accepted: false},
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
@@ -868,7 +868,12 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				},
 			},
 			{
-				name:   "Should fail is the user does not have any permissions",
+				name:   "Should fail if the user exists but has not accepted their invite",
+				userID: "test_user_member5678",
+				err:    fmt.Errorf("Response not OK. 404 Not Found: no permissions found for given user ID"),
+			},
+			{
+				name:   "Should fail if the user does not have any permissions",
 				userID: "test_user_hey_who_am_i_wow",
 				err:    fmt.Errorf("Response not OK. 404 Not Found: no permissions found for given user ID"),
 			},
@@ -1242,14 +1247,13 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				loadBalancerID: "test_lb_34987u329rfn23f",
 				user: types.UserAccess{
 					RoleName: types.RoleMember,
-					UserID:   "test_user_create_new_member",
 					Email:    "member_new@test.com",
 				},
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
 					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
 					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_create_new_member", Email: "member_new@test.com", Accepted: false},
+					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
 				},
 			},
 			{
@@ -1508,35 +1512,65 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 
 	ts.Run("Test_UpdateLoadBalancerUserRole", func() {
 		tests := []struct {
-			name              string
-			loadBalancerID    string
-			userUpdate        types.UpdateUserAccess
-			loadBalancerUsers []types.UserAccess
-			err               error
+			name                   string
+			loadBalancerID, userID string
+			roleName               types.RoleName
+			loadBalancerUsers      []types.UserAccess
+			err                    error
 		}{
 			{
-				name:           "Should add a single user to an existing load balancer in the DB",
+				name:           "Should update a single user to an existing load balancer in the DB",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				userUpdate: types.UpdateUserAccess{
-					RoleName: types.RoleAdmin,
-					UserID:   "test_user_create_new_member",
+				userID:         "test_user_member1234",
+				roleName:       types.RoleAdmin,
+				loadBalancerUsers: []types.UserAccess{
+					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
 				},
+			},
+			{
+				name:           "Should update a single user to an existing load balancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				userID:         "test_user_member1234",
+				roleName:       types.RoleMember,
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
 					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
 					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_create_new_member", Email: "member_new@test.com", Accepted: false},
+					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
 				},
+			},
+			{
+				name:           "Should fail if load balancer ID not provided",
+				loadBalancerID: "",
+				err:            errNoLoadBalancerID,
+			},
+			{
+				name:           "Should fail if user ID not provided",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				userID:         "",
+				err:            errNoUserID,
+			},
+			{
+				name:           "Should fail if invalid role name provided",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				userID:         "test_user_member1234",
+				roleName:       types.RoleName("wrong_one"),
+				err:            errInvalidRoleName,
 			},
 			{
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "im_not_here",
+				userID:         "test_user_member1234",
+				roleName:       types.RoleMember,
 				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
 			},
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.UpdateLoadBalancerUserRole(testCtx, test.loadBalancerID, test.userUpdate)
+			_, err := ts.client.UpdateLoadBalancerUserRole(testCtx, test.loadBalancerID, test.userID, test.roleName)
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
@@ -1548,44 +1582,52 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 
 	ts.Run("Test_AcceptLoadBalancerUser", func() {
 		tests := []struct {
-			name                   string
-			loadBalancerID, userID string
-			loadBalancerUsers      []types.UserAccess
-			err                    error
+			name                          string
+			email, loadBalancerID, userID string
+			loadBalancerUsers             []types.UserAccess
+			err                           error
 		}{
 			{
-				name:           "Should add a single user to an existing load balancer in the DB",
+				name:           "Should update a single user's ID and Accepted field for an existing load balancer in the DB",
+				email:          "member_new@test.com",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				userID:         "test_user_create_new_member",
+				userID:         "test_user_accept_member",
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
 					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
 					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_create_new_member", Email: "member_new@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "test_user_accept_member", Email: "member_new@test.com", Accepted: true},
 				},
 			},
 			{
+				name:  "Should fail if email not provided",
+				email: "",
+				err:   errNoEmail,
+			},
+			{
 				name:           "Should fail if load balancer ID not provided",
+				email:          "member_new@test.com",
 				loadBalancerID: "",
-				userID:         "test_user_create_new_member",
-				err:            fmt.Errorf("no load balancer ID"),
+				err:            errNoLoadBalancerID,
 			},
 			{
 				name:           "Should fail if user ID not provided",
-				loadBalancerID: "im_not_here",
+				email:          "member_new@test.com",
+				loadBalancerID: "test_lb_34987u329rfn23f",
 				userID:         "",
-				err:            fmt.Errorf("no user ID"),
+				err:            errNoUserID,
 			},
 			{
 				name:           "Should fail if load balancer cannot be found",
+				email:          "member_new@test.com",
 				loadBalancerID: "im_not_here",
-				userID:         "test_user_create_new_member",
+				userID:         "test_user_accept_member",
 				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
 			},
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.AcceptLoadBalancerUser(testCtx, test.loadBalancerID, test.userID)
+			_, err := ts.client.AcceptLoadBalancerUser(testCtx, test.email, test.loadBalancerID, test.userID)
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
@@ -1639,7 +1681,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
 					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_create_new_member", Email: "member_new@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "test_user_accept_member", Email: "member_new@test.com", Accepted: true},
 				},
 			},
 			{
