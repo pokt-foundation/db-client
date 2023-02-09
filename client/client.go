@@ -52,12 +52,15 @@ type (
 		GetLoadBalancers(ctx context.Context) ([]*types.LoadBalancer, error)
 		// GetLoadBalancerByID returns a single Load Balancer by its ID - GET `<base URL>/<version>/load_balancer/{id}`
 		GetLoadBalancerByID(ctx context.Context, loadBalancerID string) (*types.LoadBalancer, error)
-		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`
+		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`.*/
+		// This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
 		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
 		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
 		// GetPayPlanByType returns a single Pay Plan by its type - GET `<base URL>/<version>/pay_plan/{type}`
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
+		// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
+		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (types.UserPermissions, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
@@ -104,6 +107,7 @@ const (
 	redirectPath           subPath = "redirect"
 	activatePath           subPath = "activate"
 	firstDateSurpassedPath subPath = "first_date_surpassed"
+	permissionPath         subPath = "permission"
 )
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
@@ -307,6 +311,17 @@ func (db *DBClient) GetPayPlanByType(ctx context.Context, payPlanType types.PayP
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(payPlanPath), payPlanType)
 
 	return get[*types.PayPlan](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
+func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (types.UserPermissions, error) {
+	if userID == "" {
+		return types.UserPermissions{}, errNoUserID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(userPath), userID, permissionPath)
+
+	return get[types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Create Methods -- */
