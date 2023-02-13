@@ -218,8 +218,19 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
 						},
 						GatewaySettings: types.GatewaySettings{
-							SecretKey:         "test_40f482d91a5ef2300ebb4e2308c",
-							SecretKeyRequired: true,
+							SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
+							SecretKeyRequired:   true,
+							WhitelistOrigins:    []string{"origin_1", "origin_2"},
+							WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+							WhitelistContracts: []types.WhitelistContract{
+								{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
+								{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+							},
+							WhitelistMethods: []types.WhitelistMethod{
+								{BlockchainID: "TST1", Methods: []string{"GET"}},
+								{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+							},
+							WhitelistBlockchains: []string{"chain_1"},
 						},
 						Limit: types.AppLimit{
 							PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
@@ -432,8 +443,19 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 									PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
 								},
 								GatewaySettings: types.GatewaySettings{
-									SecretKey:         "test_40f482d91a5ef2300ebb4e2308c",
-									SecretKeyRequired: true,
+									SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
+									SecretKeyRequired:   true,
+									WhitelistOrigins:    []string{"origin_1", "origin_2"},
+									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+									WhitelistContracts: []types.WhitelistContract{
+										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
+										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+									},
+									WhitelistMethods: []types.WhitelistMethod{
+										{BlockchainID: "TST1", Methods: []string{"GET"}},
+										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+									},
+									WhitelistBlockchains: []string{"chain_1"},
 								},
 								Limit: types.AppLimit{
 									PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
@@ -663,8 +685,19 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 									PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
 								},
 								GatewaySettings: types.GatewaySettings{
-									SecretKey:         "test_40f482d91a5ef2300ebb4e2308c",
-									SecretKeyRequired: true,
+									SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
+									SecretKeyRequired:   true,
+									WhitelistOrigins:    []string{"origin_1", "origin_2"},
+									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+									WhitelistContracts: []types.WhitelistContract{
+										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
+										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+									},
+									WhitelistMethods: []types.WhitelistMethod{
+										{BlockchainID: "TST1", Methods: []string{"GET"}},
+										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+									},
+									WhitelistBlockchains: []string{"chain_1"},
 								},
 								Limit: types.AppLimit{
 									PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
@@ -724,8 +757,19 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 									PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
 								},
 								GatewaySettings: types.GatewaySettings{
-									SecretKey:         "test_40f482d91a5ef2300ebb4e2308c",
-									SecretKeyRequired: true,
+									SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
+									SecretKeyRequired:   true,
+									WhitelistOrigins:    []string{"origin_1", "origin_2"},
+									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+									WhitelistContracts: []types.WhitelistContract{
+										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
+										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+									},
+									WhitelistMethods: []types.WhitelistMethod{
+										{BlockchainID: "TST1", Methods: []string{"GET"}},
+										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+									},
+									WhitelistBlockchains: []string{"chain_1"},
 								},
 								Limit: types.AppLimit{
 									PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
@@ -1176,8 +1220,19 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 								PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
 							},
 							GatewaySettings: types.GatewaySettings{
-								SecretKey:         "test_40f482d91a5ef2300ebb4e2308c",
-								SecretKeyRequired: true,
+								SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
+								SecretKeyRequired:   true,
+								WhitelistOrigins:    []string{"origin_1", "origin_2"},
+								WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+								WhitelistContracts: []types.WhitelistContract{
+									{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
+									{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+								},
+								WhitelistMethods: []types.WhitelistMethod{
+									{BlockchainID: "TST1", Methods: []string{"GET"}},
+									{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+								},
+								WhitelistBlockchains: []string{"chain_1"},
 							},
 							Limit: types.AppLimit{
 								PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
@@ -1512,16 +1567,16 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 
 	ts.Run("Test_UpdateLoadBalancerUserRole", func() {
 		tests := []struct {
-			name                   string
-			loadBalancerID, userID string
-			roleName               types.RoleName
-			loadBalancerUsers      []types.UserAccess
-			err                    error
+			name                  string
+			loadBalancerID, email string
+			roleName              types.RoleName
+			loadBalancerUsers     []types.UserAccess
+			err                   error
 		}{
 			{
 				name:           "Should update a single user to an existing load balancer in the DB",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				userID:         "test_user_member1234",
+				email:          "member1@test.com",
 				roleName:       types.RoleAdmin,
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
@@ -1533,7 +1588,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name:           "Should update a single user to an existing load balancer in the DB",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				userID:         "test_user_member1234",
+				email:          "member1@test.com",
 				roleName:       types.RoleMember,
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
@@ -1548,29 +1603,29 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				err:            errNoLoadBalancerID,
 			},
 			{
-				name:           "Should fail if user ID not provided",
+				name:           "Should fail if user email not provided",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				userID:         "",
-				err:            errNoUserID,
+				email:          "",
+				err:            errNoEmail,
 			},
 			{
 				name:           "Should fail if invalid role name provided",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				userID:         "test_user_member1234",
+				email:          "test_user_member1234",
 				roleName:       types.RoleName("wrong_one"),
 				err:            errInvalidRoleName,
 			},
 			{
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "im_not_here",
-				userID:         "test_user_member1234",
+				email:          "test_user_member1234",
 				roleName:       types.RoleMember,
 				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
 			},
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.UpdateLoadBalancerUserRole(testCtx, test.loadBalancerID, test.userID, test.roleName)
+			_, err := ts.client.UpdateLoadBalancerUserRole(testCtx, test.loadBalancerID, test.email, test.roleName)
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
