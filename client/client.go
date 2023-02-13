@@ -85,7 +85,7 @@ type (
 		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
 		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
-		UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, userID string, roleName types.RoleName) (*types.LoadBalancer, error)
+		UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, email string, roleName types.RoleName) (*types.LoadBalancer, error)
 		// AcceptLoadBalancerUser updates a single User's UserID and Accepted fields for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/accept`
 		AcceptLoadBalancerUser(ctx context.Context, email, loadBalancerID, userID string) (*types.LoadBalancer, error)
 		// RemoveLoadBalancer removes a single LoadBalancer by updating its user field to null - PUT `<base URL>/<version>/load_balancer/{id}` with Remove: true
@@ -457,19 +457,19 @@ func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate 
 }
 
 // UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
-func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID, userID string, roleName types.RoleName) (*types.LoadBalancer, error) {
+func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID, email string, roleName types.RoleName) (*types.LoadBalancer, error) {
 	if loadBalancerID == "" {
 		return nil, errNoLoadBalancerID
 	}
-	if userID == "" {
-		return nil, errNoUserID
+	if email == "" {
+		return nil, errNoEmail
 	}
 	if roleName == types.RoleName("") || !types.ValidRoleNames[roleName] {
 		return nil, errInvalidRoleName
 	}
 
 	loadBalancerUserUpdateJSON, err := json.Marshal(types.UpdateUserAccess{
-		UserID:   userID,
+		Email:    email,
 		RoleName: roleName,
 	})
 	if err != nil {
