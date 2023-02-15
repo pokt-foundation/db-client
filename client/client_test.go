@@ -1724,15 +1724,15 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 
 	ts.Run("Test_DeleteLoadBalancerUser", func() {
 		tests := []struct {
-			name                   string
-			loadBalancerID, userID string
-			loadBalancerUsers      []types.UserAccess
-			err                    error
+			name                  string
+			loadBalancerID, email string
+			loadBalancerUsers     []types.UserAccess
+			err                   error
 		}{
 			{
 				name:           "Should add a single user to an existing load balancer in the DB",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				userID:         "test_user_member1234",
+				email:          "member1@test.com",
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
 					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
@@ -1742,13 +1742,25 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "why_am_i_not_a_load_balancer",
-				userID:         "test_user_member1234",
+				email:          "member1@test.com",
 				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+			},
+			{
+				name:           "Should fail if load balancer ID not provided",
+				loadBalancerID: "",
+				email:          "member1@test.com",
+				err:            errNoLoadBalancerID,
+			},
+			{
+				name:           "Should fail if email not provided",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				email:          "",
+				err:            errNoEmail,
 			},
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.DeleteLoadBalancerUser(testCtx, test.loadBalancerID, test.userID)
+			_, err := ts.client.DeleteLoadBalancerUser(testCtx, test.loadBalancerID, test.email)
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)

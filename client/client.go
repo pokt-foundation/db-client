@@ -90,8 +90,8 @@ type (
 		AcceptLoadBalancerUser(ctx context.Context, email, loadBalancerID, userID string) (*types.LoadBalancer, error)
 		// RemoveLoadBalancer removes a single LoadBalancer by updating its user field to null - PUT `<base URL>/<version>/load_balancer/{id}` with Remove: true
 		RemoveLoadBalancer(ctx context.Context, id string) (*types.LoadBalancer, error)
-		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}`
-		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
+		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{email}`
+		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, email string) (*types.LoadBalancer, error)
 	}
 
 	basePath   string
@@ -540,16 +540,16 @@ func (db *DBClient) RemoveLoadBalancer(ctx context.Context, id string) (*types.L
 
 /* -- Delete Methods -- */
 
-// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}` with Remove: true
-func (db *DBClient) DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error) {
+// DeleteLoadBalancerUser deletes a single User from a single Load Balancer by user email - DELETE `<base URL>/<version>/load_balancer/{id}/user/{email}`
+func (db *DBClient) DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, email string) (*types.LoadBalancer, error) {
 	if loadBalancerID == "" {
 		return nil, errNoLoadBalancerID
 	}
-	if userID == "" {
-		return nil, errNoUserID
+	if email == "" {
+		return nil, errNoEmail
 	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath, userID)
+	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath, email)
 
 	return delete[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), db.httpClient)
 }
