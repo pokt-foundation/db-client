@@ -1019,7 +1019,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				ts.Equal(test.blockchain.EnforceResult, blockchain.EnforceResult)
 				ts.Equal(test.blockchain.Network, blockchain.Network)
 				ts.Equal(test.blockchain.Path, blockchain.Path)
-				ts.Equal(test.blockchain.SyncCheck, blockchain.SyncCheck)
 				ts.Equal(test.blockchain.Ticker, blockchain.Ticker)
 				ts.Equal(test.blockchain.BlockchainAliases, blockchain.BlockchainAliases)
 				ts.Equal(test.blockchain.LogLimitBlocks, blockchain.LogLimitBlocks)
@@ -1524,7 +1523,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					BlockchainAliases: []string{"pokt-mainnet", "another-one"},
 					EnforceResult:     "JSON-2",
 					Path:              "new-path",
-					Synccheck:         "new-sync-check",
 					Body:              `{"new-body": "alliance"}`,
 				},
 				blockchainAfterUpdate: types.Blockchain{
@@ -1540,7 +1538,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					LogLimitBlocks:    100_010,
 					Active:            true,
 					RequestTimeout:    66_654,
-					SyncCheck:         "new-sync-check",
 					Redirects: []types.Redirect{
 						{
 							Alias:          "test-mainnet",
@@ -1581,7 +1578,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				ts.Equal(test.blockchainAfterUpdate.BlockchainAliases, updatedBlockchain.BlockchainAliases)
 				ts.Equal(test.blockchainAfterUpdate.EnforceResult, updatedBlockchain.EnforceResult)
 				ts.Equal(test.blockchainAfterUpdate.Path, updatedBlockchain.Path)
-				ts.Equal(test.blockchainAfterUpdate.SyncCheck, updatedBlockchain.SyncCheck)
 				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.ResultKey, updatedBlockchain.SyncCheckOptions.ResultKey)
 				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.Path, updatedBlockchain.SyncCheckOptions.Path)
 				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.Body, updatedBlockchain.SyncCheckOptions.Body)
