@@ -222,11 +222,11 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							SecretKeyRequired:   true,
 							WhitelistOrigins:    []string{"origin_1", "origin_2"},
 							WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
-							WhitelistContracts: []types.WhitelistContract{
+							WhitelistContracts: []types.WhitelistContracts{
 								{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
 								{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
 							},
-							WhitelistMethods: []types.WhitelistMethod{
+							WhitelistMethods: []types.WhitelistMethods{
 								{BlockchainID: "TST1", Methods: []string{"GET"}},
 								{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
 							},
@@ -447,11 +447,11 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 									SecretKeyRequired:   true,
 									WhitelistOrigins:    []string{"origin_1", "origin_2"},
 									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
-									WhitelistContracts: []types.WhitelistContract{
+									WhitelistContracts: []types.WhitelistContracts{
 										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
 										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
 									},
-									WhitelistMethods: []types.WhitelistMethod{
+									WhitelistMethods: []types.WhitelistMethods{
 										{BlockchainID: "TST1", Methods: []string{"GET"}},
 										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
 									},
@@ -689,11 +689,11 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 									SecretKeyRequired:   true,
 									WhitelistOrigins:    []string{"origin_1", "origin_2"},
 									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
-									WhitelistContracts: []types.WhitelistContract{
+									WhitelistContracts: []types.WhitelistContracts{
 										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
 										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
 									},
-									WhitelistMethods: []types.WhitelistMethod{
+									WhitelistMethods: []types.WhitelistMethods{
 										{BlockchainID: "TST1", Methods: []string{"GET"}},
 										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
 									},
@@ -761,11 +761,11 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 									SecretKeyRequired:   true,
 									WhitelistOrigins:    []string{"origin_1", "origin_2"},
 									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
-									WhitelistContracts: []types.WhitelistContract{
+									WhitelistContracts: []types.WhitelistContracts{
 										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
 										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
 									},
-									WhitelistMethods: []types.WhitelistMethod{
+									WhitelistMethods: []types.WhitelistMethods{
 										{BlockchainID: "TST1", Methods: []string{"GET"}},
 										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
 									},
@@ -1224,11 +1224,11 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 								SecretKeyRequired:   true,
 								WhitelistOrigins:    []string{"origin_1", "origin_2"},
 								WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
-								WhitelistContracts: []types.WhitelistContract{
+								WhitelistContracts: []types.WhitelistContracts{
 									{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
 									{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
 								},
-								WhitelistMethods: []types.WhitelistMethod{
+								WhitelistMethods: []types.WhitelistMethods{
 									{BlockchainID: "TST1", Methods: []string{"GET"}},
 									{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
 								},
@@ -1380,8 +1380,8 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					GatewaySettings: &types.UpdateGatewaySettings{
 						WhitelistOrigins:     []string{"test-origin1", "test-origin2"},
 						WhitelistUserAgents:  []string{"test-agent1"},
-						WhitelistContracts:   []types.WhitelistContract{{BlockchainID: "01", Contracts: []string{"test-contract1"}}},
-						WhitelistMethods:     []types.WhitelistMethod{{BlockchainID: "01", Methods: []string{"test-method1"}}},
+						WhitelistContracts:   []types.WhitelistContracts{{BlockchainID: "01", Contracts: []string{"test-contract1"}}},
+						WhitelistMethods:     []types.WhitelistMethods{{BlockchainID: "01", Methods: []string{"test-method1"}}},
 						WhitelistBlockchains: []string{"test-chain1"},
 					},
 					NotificationSettings: &types.UpdateNotificationSettings{SignedUp: boolPointer(false), Quarter: boolPointer(true), Half: boolPointer(true), ThreeQuarters: boolPointer(false), Full: boolPointer(false)},
@@ -1394,8 +1394,8 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 						SecretKeyRequired:    true,
 						WhitelistOrigins:     []string{"test-origin1", "test-origin2"},
 						WhitelistUserAgents:  []string{"test-agent1"},
-						WhitelistContracts:   []types.WhitelistContract{{BlockchainID: "01", Contracts: []string{"test-contract1"}}},
-						WhitelistMethods:     []types.WhitelistMethod{{BlockchainID: "01", Methods: []string{"test-method1"}}},
+						WhitelistContracts:   []types.WhitelistContracts{{BlockchainID: "01", Contracts: []string{"test-contract1"}}},
+						WhitelistMethods:     []types.WhitelistMethods{{BlockchainID: "01", Methods: []string{"test-method1"}}},
 						WhitelistBlockchains: []string{"test-chain1"},
 					},
 					NotificationSettings: types.NotificationSettings{SignedUp: false, Quarter: true, Half: true, ThreeQuarters: false, Full: false},
@@ -1500,6 +1500,95 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 	})
 
+	ts.Run("Test_UpdateBlockchain", func() {
+		tests := []struct {
+			name                  string
+			blockchainID          string
+			blockchainUpdate      types.UpdateBlockchain
+			blockchainAfterUpdate types.Blockchain
+			err                   error
+		}{
+			{
+				name:         "Should update a single loadBalancer in the DB",
+				blockchainID: "0001",
+				blockchainUpdate: types.UpdateBlockchain{
+					Altruist:          "https://test-update:test-password123@shared-test2.nodes.pokt.network:12345", // pragma: allowlist secret
+					Blockchain:        "pokt-mainnet-updated",
+					Description:       "POKT Network Mainnet Updated",
+					RequestTimeout:    66_654,
+					ResultKey:         "updated-key",
+					LogLimitBlocks:    100_010,
+					Network:           "new-network",
+					Ticker:            "SUCH-WOW",
+					SyncCheckPath:     "/v1/query/wow-new",
+					BlockchainAliases: []string{"pokt-mainnet", "another-one"},
+					EnforceResult:     "JSON-2",
+					Path:              "new-path",
+					Synccheck:         "new-sync-check",
+					Body:              `{"new-body": "alliance"}`,
+				},
+				blockchainAfterUpdate: types.Blockchain{
+					ID:                "0001",
+					Altruist:          "https://test-update:test-password123@shared-test2.nodes.pokt.network:12345", // pragma: allowlist secret
+					Blockchain:        "pokt-mainnet-updated",
+					Description:       "POKT Network Mainnet Updated",
+					EnforceResult:     "JSON-2",
+					Network:           "new-network",
+					Ticker:            "SUCH-WOW",
+					Path:              "new-path",
+					BlockchainAliases: []string{"pokt-mainnet", "another-one"},
+					LogLimitBlocks:    100_010,
+					Active:            true,
+					RequestTimeout:    66_654,
+					SyncCheck:         "new-sync-check",
+					Redirects: []types.Redirect{
+						{
+							Alias:          "test-mainnet",
+							Domain:         "test-rpc1.testnet.pokt.network",
+							LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+						},
+						{
+							Alias:          "test-mainnet",
+							Domain:         "test-rpc2.testnet.pokt.network",
+							LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+						},
+					},
+					SyncCheckOptions: types.SyncCheckOptions{
+						Body:      `{"new-body": "alliance"}`,
+						Path:      "/v1/query/wow-new",
+						ResultKey: "updated-key",
+						Allowance: 1,
+					},
+				},
+			},
+			{
+				name:         "Should fail if blockchain cannot be found",
+				blockchainID: "9000",
+				err:          fmt.Errorf("Response not OK. 404 Not Found: blockchain not found"),
+			},
+		}
+
+		for _, test := range tests {
+			updatedBlockchain, err := ts.client.UpdateBlockchain(testCtx, test.blockchainID, test.blockchainUpdate)
+			ts.Equal(test.err, err)
+			if err == nil {
+				ts.Equal(test.blockchainAfterUpdate.Blockchain, updatedBlockchain.Blockchain)
+				ts.Equal(test.blockchainAfterUpdate.Description, updatedBlockchain.Description)
+				ts.Equal(test.blockchainAfterUpdate.RequestTimeout, updatedBlockchain.RequestTimeout)
+				ts.Equal(test.blockchainAfterUpdate.LogLimitBlocks, updatedBlockchain.LogLimitBlocks)
+				ts.Equal(test.blockchainAfterUpdate.Network, updatedBlockchain.Network)
+				ts.Equal(test.blockchainAfterUpdate.Ticker, updatedBlockchain.Ticker)
+				ts.Equal(test.blockchainAfterUpdate.BlockchainAliases, updatedBlockchain.BlockchainAliases)
+				ts.Equal(test.blockchainAfterUpdate.EnforceResult, updatedBlockchain.EnforceResult)
+				ts.Equal(test.blockchainAfterUpdate.Path, updatedBlockchain.Path)
+				ts.Equal(test.blockchainAfterUpdate.SyncCheck, updatedBlockchain.SyncCheck)
+				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.ResultKey, updatedBlockchain.SyncCheckOptions.ResultKey)
+				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.Path, updatedBlockchain.SyncCheckOptions.Path)
+				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.Body, updatedBlockchain.SyncCheckOptions.Body)
+			}
+		}
+	})
+
 	ts.Run("Test_UpdateLoadBalancer", func() {
 		tests := []struct {
 			name                    string
@@ -1554,10 +1643,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 
 		for _, test := range tests {
-			createdLB, err := ts.client.UpdateLoadBalancer(testCtx, test.loadBalancerID, test.loadBalancerUpdate)
+			updatedLB, err := ts.client.UpdateLoadBalancer(testCtx, test.loadBalancerID, test.loadBalancerUpdate)
 			ts.Equal(test.err, err)
 			if err == nil {
-				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, createdLB.ID)
+				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, updatedLB.ID)
 				ts.Equal(test.err, err)
 				ts.Equal(test.loadBalancerAfterUpdate.Name, loadBalancer.Name)
 				ts.Equal(test.loadBalancerAfterUpdate.StickyOptions, loadBalancer.StickyOptions)
