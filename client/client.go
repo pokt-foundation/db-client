@@ -82,6 +82,8 @@ type (
 		UpdateAppFirstDateSurpassed(ctx context.Context, updateInput types.UpdateFirstDateSurpassed) ([]*types.Application, error)
 		// RemoveApplication removes a single Application by updating its status field - PUT `<base URL>/<version>/application/{id}` with Remove: true
 		RemoveApplication(ctx context.Context, id string) (*types.Application, error)
+		// UpdateBlockchain updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/blockchain/{id}`
+		UpdateBlockchain(ctx context.Context, blockchainID string, chainUpdate types.UpdateBlockchain) (*types.Blockchain, error)
 		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
 		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
@@ -438,6 +440,22 @@ func (db *DBClient) UpdateAppFirstDateSurpassed(ctx context.Context, updateInput
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(applicationPath), firstDateSurpassedPath)
 
 	return post[[]*types.Application](endpoint, db.getAuthHeaderForWrite(), firstDateSurpassedJSON, db.httpClient)
+}
+
+// UpdateBlockchain updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/blockchain/{id}`
+func (db *DBClient) UpdateBlockchain(ctx context.Context, blockchainID string, chainUpdate types.UpdateBlockchain) (*types.Blockchain, error) {
+	if blockchainID == "" {
+		return nil, errNoBlockchainID
+	}
+
+	blockchainUpdateJSON, err := json.Marshal(chainUpdate)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidBlockchainJSON, err)
+	}
+
+	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), blockchainID)
+
+	return put[*types.Blockchain](endpoint, db.getAuthHeaderForWrite(), blockchainUpdateJSON, db.httpClient)
 }
 
 // UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
