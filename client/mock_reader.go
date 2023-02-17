@@ -175,13 +175,13 @@ func (_m *MockIDBReader) GetLoadBalancers(ctx context.Context) ([]*types.LoadBal
 	return r0, r1
 }
 
-// GetLoadBalancersByUserID provides a mock function with given fields: ctx, userID
-func (_m *MockIDBReader) GetLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error) {
-	ret := _m.Called(ctx, userID)
+// GetLoadBalancersByUserID provides a mock function with given fields: ctx, userID, roleNameFilter
+func (_m *MockIDBReader) GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error) {
+	ret := _m.Called(ctx, userID, roleNameFilter)
 
 	var r0 []*types.LoadBalancer
-	if rf, ok := ret.Get(0).(func(context.Context, string) []*types.LoadBalancer); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, string, *types.RoleName) []*types.LoadBalancer); ok {
+		r0 = rf(ctx, userID, roleNameFilter)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*types.LoadBalancer)
@@ -189,8 +189,8 @@ func (_m *MockIDBReader) GetLoadBalancersByUserID(ctx context.Context, userID st
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, string, *types.RoleName) error); ok {
+		r1 = rf(ctx, userID, roleNameFilter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -237,6 +237,29 @@ func (_m *MockIDBReader) GetPayPlans(ctx context.Context) ([]*types.PayPlan, err
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
 		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetUserPermissionsByUserID provides a mock function with given fields: ctx, userID
+func (_m *MockIDBReader) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 *types.UserPermissions
+	if rf, ok := ret.Get(0).(func(context.Context, types.UserID) *types.UserPermissions); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.UserPermissions)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, types.UserID) error); ok {
+		r1 = rf(ctx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}

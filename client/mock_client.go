@@ -14,6 +14,29 @@ type MockIDBClient struct {
 	mock.Mock
 }
 
+// AcceptLoadBalancerUser provides a mock function with given fields: ctx, email, loadBalancerID, userID
+func (_m *MockIDBClient) AcceptLoadBalancerUser(ctx context.Context, email string, loadBalancerID string, userID string) (*types.LoadBalancer, error) {
+	ret := _m.Called(ctx, email, loadBalancerID, userID)
+
+	var r0 *types.LoadBalancer
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) *types.LoadBalancer); ok {
+		r0 = rf(ctx, email, loadBalancerID, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.LoadBalancer)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = rf(ctx, email, loadBalancerID, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ActivateBlockchain provides a mock function with given fields: ctx, blockchainID, active
 func (_m *MockIDBClient) ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error) {
 	ret := _m.Called(ctx, blockchainID, active)
@@ -150,13 +173,13 @@ func (_m *MockIDBClient) CreateLoadBalancerUser(ctx context.Context, loadBalance
 	return r0, r1
 }
 
-// DeleteLoadBalancerUser provides a mock function with given fields: ctx, loadBalancerID, userID
-func (_m *MockIDBClient) DeleteLoadBalancerUser(ctx context.Context, loadBalancerID string, userID string) (*types.LoadBalancer, error) {
-	ret := _m.Called(ctx, loadBalancerID, userID)
+// DeleteLoadBalancerUser provides a mock function with given fields: ctx, loadBalancerID, email
+func (_m *MockIDBClient) DeleteLoadBalancerUser(ctx context.Context, loadBalancerID string, email string) (*types.LoadBalancer, error) {
+	ret := _m.Called(ctx, loadBalancerID, email)
 
 	var r0 *types.LoadBalancer
 	if rf, ok := ret.Get(0).(func(context.Context, string, string) *types.LoadBalancer); ok {
-		r0 = rf(ctx, loadBalancerID, userID)
+		r0 = rf(ctx, loadBalancerID, email)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.LoadBalancer)
@@ -165,7 +188,7 @@ func (_m *MockIDBClient) DeleteLoadBalancerUser(ctx context.Context, loadBalance
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, loadBalancerID, userID)
+		r1 = rf(ctx, loadBalancerID, email)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -334,13 +357,13 @@ func (_m *MockIDBClient) GetLoadBalancers(ctx context.Context) ([]*types.LoadBal
 	return r0, r1
 }
 
-// GetLoadBalancersByUserID provides a mock function with given fields: ctx, userID
-func (_m *MockIDBClient) GetLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error) {
-	ret := _m.Called(ctx, userID)
+// GetLoadBalancersByUserID provides a mock function with given fields: ctx, userID, roleNameFilter
+func (_m *MockIDBClient) GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error) {
+	ret := _m.Called(ctx, userID, roleNameFilter)
 
 	var r0 []*types.LoadBalancer
-	if rf, ok := ret.Get(0).(func(context.Context, string) []*types.LoadBalancer); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, string, *types.RoleName) []*types.LoadBalancer); ok {
+		r0 = rf(ctx, userID, roleNameFilter)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*types.LoadBalancer)
@@ -348,8 +371,8 @@ func (_m *MockIDBClient) GetLoadBalancersByUserID(ctx context.Context, userID st
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, string, *types.RoleName) error); ok {
+		r1 = rf(ctx, userID, roleNameFilter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -396,6 +419,29 @@ func (_m *MockIDBClient) GetPayPlans(ctx context.Context) ([]*types.PayPlan, err
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
 		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetUserPermissionsByUserID provides a mock function with given fields: ctx, userID
+func (_m *MockIDBClient) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 *types.UserPermissions
+	if rf, ok := ret.Get(0).(func(context.Context, types.UserID) *types.UserPermissions); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.UserPermissions)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, types.UserID) error); ok {
+		r1 = rf(ctx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -495,6 +541,29 @@ func (_m *MockIDBClient) UpdateApplication(ctx context.Context, id string, updat
 	return r0, r1
 }
 
+// UpdateBlockchain provides a mock function with given fields: ctx, blockchainID, chainUpdate
+func (_m *MockIDBClient) UpdateBlockchain(ctx context.Context, blockchainID string, chainUpdate types.UpdateBlockchain) (*types.Blockchain, error) {
+	ret := _m.Called(ctx, blockchainID, chainUpdate)
+
+	var r0 *types.Blockchain
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.UpdateBlockchain) *types.Blockchain); ok {
+		r0 = rf(ctx, blockchainID, chainUpdate)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Blockchain)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, types.UpdateBlockchain) error); ok {
+		r1 = rf(ctx, blockchainID, chainUpdate)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UpdateLoadBalancer provides a mock function with given fields: ctx, id, lbUpdate
 func (_m *MockIDBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error) {
 	ret := _m.Called(ctx, id, lbUpdate)
@@ -518,13 +587,13 @@ func (_m *MockIDBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUp
 	return r0, r1
 }
 
-// UpdateLoadBalancerUserRole provides a mock function with given fields: ctx, id, userUpdate
-func (_m *MockIDBClient) UpdateLoadBalancerUserRole(ctx context.Context, id string, userUpdate types.UpdateUserAccess) (*types.LoadBalancer, error) {
-	ret := _m.Called(ctx, id, userUpdate)
+// UpdateLoadBalancerUserRole provides a mock function with given fields: ctx, loadBalancerID, email, roleName
+func (_m *MockIDBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, email string, roleName types.RoleName) (*types.LoadBalancer, error) {
+	ret := _m.Called(ctx, loadBalancerID, email, roleName)
 
 	var r0 *types.LoadBalancer
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.UpdateUserAccess) *types.LoadBalancer); ok {
-		r0 = rf(ctx, id, userUpdate)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, types.RoleName) *types.LoadBalancer); ok {
+		r0 = rf(ctx, loadBalancerID, email, roleName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.LoadBalancer)
@@ -532,8 +601,8 @@ func (_m *MockIDBClient) UpdateLoadBalancerUserRole(ctx context.Context, id stri
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, types.UpdateUserAccess) error); ok {
-		r1 = rf(ctx, id, userUpdate)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, types.RoleName) error); ok {
+		r1 = rf(ctx, loadBalancerID, email, roleName)
 	} else {
 		r1 = ret.Error(1)
 	}

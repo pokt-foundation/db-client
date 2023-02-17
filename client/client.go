@@ -117,12 +117,10 @@ const (
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
 const (
-	V0 APIVersion = "v0" // TODO remove when dropping v0 support
 	V1 APIVersion = "v1"
 )
 
 var ValidAPIVersions = map[APIVersion]bool{
-	V0: true, // TODO remove when dropping v0 support
 	V1: true,
 }
 
@@ -195,10 +193,6 @@ func (c Config) validateConfig() error {
 
 // versionedBasePath returns the base path for a given data type eg. `https://pocket.http-db-url.com/v1/application`
 func (db *DBClient) versionedBasePath(dataTypePath basePath) string {
-	if db.config.Version == V0 { // TODO remove when dropping v0 support
-		return fmt.Sprintf("%s/%s", db.config.BaseURL, dataTypePath)
-	}
-
 	return fmt.Sprintf("%s/%s/%s", db.config.BaseURL, db.config.Version, dataTypePath)
 }
 
@@ -352,12 +346,7 @@ func (db *DBClient) CreateBlockchainRedirect(ctx context.Context, redirect types
 		return nil, fmt.Errorf("%w: %s", errInvalidAppJSON, err)
 	}
 
-	var endpoint string
-	if db.config.Version == V0 { // TODO remove when dropping v0 support
-		endpoint = db.versionedBasePath(basePath(redirectPath))
-	} else {
-		endpoint = fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), redirectPath)
-	}
+	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), redirectPath)
 
 	return post[*types.Redirect](endpoint, db.getAuthHeaderForWrite(), redirectJSON, db.httpClient)
 }
