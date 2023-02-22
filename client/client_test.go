@@ -821,6 +821,54 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}
 	})
 
+	ts.Run("Test_GetPendingLoadBalancersByEmail", func() {
+		tests := []struct {
+			name                  string
+			userEmail             string
+			expectedLoadBalancers []*types.LoadBalancer
+			err                   error
+		}{
+			{
+				name:      "Should fetch all pending load balancers for a single user email",
+				userEmail: "member2@test.com",
+				expectedLoadBalancers: []*types.LoadBalancer{
+					{
+						ID:                "test_lb_34gg4g43g34g5hh",
+						Name:              "test_lb_redirect",
+						UserID:            "test_user_redirect233344",
+						RequestTimeout:    5_000,
+						Gigastake:         false,
+						GigastakeRedirect: false,
+						StickyOptions: types.StickyOptions{
+							Duration:      "20",
+							StickyOrigins: []string{"test-extension://", "test-extension2://"},
+							StickyMax:     600,
+							Stickiness:    false,
+						},
+						Applications: []*types.Application{nil},
+						Users: []types.UserAccess{
+							{RoleName: types.RoleOwner, UserID: "test_user_redirect233344", Email: "owner3@test.com", Accepted: true},
+							{RoleName: types.RoleMember, UserID: "", Email: "member2@test.com", Accepted: false},
+						},
+						CreatedAt: mockTimestamp,
+						UpdatedAt: mockTimestamp,
+					},
+				},
+			},
+			{
+				name:      "Should fail if the email does not have any pending load balancers in the DB",
+				userEmail: "test_not_real@user.com",
+				err:       fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+			},
+		}
+
+		for _, test := range tests {
+			pendingLoadBalancersByEmail, err := ts.client.GetPendingLoadBalancersByEmail(testCtx, test.userEmail)
+			ts.Equal(test.err, err)
+			ts.Equal(test.expectedLoadBalancers, pendingLoadBalancersByEmail)
+		}
+	})
+
 	ts.Run("Test_GetPayPlans", func() {
 		tests := []struct {
 			name             string
@@ -892,7 +940,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{
 						"test_lb_34987u329rfn23f": {
 							RoleName:    types.RoleOwner,
-							Permissions: []types.PermissionsEnum{types.ReadEndpoint, types.WriteEndpoint},
+							Permissions: []types.PermissionsEnum{types.ReadEndpoint, types.WriteEndpoint, types.DeleteEndpoint, types.TransferEndpoint},
 						},
 					},
 				},
