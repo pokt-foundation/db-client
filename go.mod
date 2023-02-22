@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/gojek/heimdall/v7 v7.0.2
 	github.com/gojektech/heimdall v5.0.2+incompatible
-	github.com/pokt-foundation/portal-db v1.7.8
+	github.com/pokt-foundation/portal-db v1.7.10
 	github.com/stretchr/testify v1.8.1
 )
 

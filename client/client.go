@@ -55,6 +55,8 @@ type (
 		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`.*/
 		// This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
 		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
+		// GetPendingLoadBalancersByEmail returns all the pending load balancers for an email - GET `<base URL>/<version>/user/{email}/load_balancer/pending`.*/
+		GetPendingLoadBalancersByEmail(ctx context.Context, email string) ([]*types.LoadBalancer, error)
 		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
 		// GetPayPlanByType returns a single Pay Plan by its type - GET `<base URL>/<version>/pay_plan/{type}`
@@ -78,7 +80,7 @@ type (
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
 		// UpdateApplication updates a single Application in the DB - PUT `<base URL>/<version>/application/{id}`
 		UpdateApplication(ctx context.Context, id string, update types.UpdateApplication) (*types.Application, error)
-		// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - PUT `<base URL>/<version>/first_date_surpassed`
+		// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - POST `<base URL>/<version>/first_date_surpassed`
 		UpdateAppFirstDateSurpassed(ctx context.Context, updateInput types.UpdateFirstDateSurpassed) ([]*types.Application, error)
 		// RemoveApplication removes a single Application by updating its status field - PUT `<base URL>/<version>/application/{id}` with Remove: true
 		RemoveApplication(ctx context.Context, id string) (*types.Application, error)
@@ -113,6 +115,7 @@ const (
 	firstDateSurpassedPath subPath = "first_date_surpassed"
 	permissionPath         subPath = "permission"
 	acceptPath             subPath = "accept"
+	pendingPath            subPath = "pending"
 )
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
@@ -296,6 +299,17 @@ func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string,
 	return get[[]*types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
+// GetPendingLoadBalancersByEmail returns all the pending load balancers for an email - GET `<base URL>/<version>/user/{email}/load_balancer/pending`.*/
+func (db *DBClient) GetPendingLoadBalancersByEmail(ctx context.Context, email string) ([]*types.LoadBalancer, error) {
+	if email == "" {
+		return nil, errNoEmail
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(userPath), email, loadBalancerPath, pendingPath)
+
+	return get[[]*types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
 // GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 func (db *DBClient) GetPayPlans(ctx context.Context) ([]*types.PayPlan, error) {
 	endpoint := db.versionedBasePath(payPlanPath)
@@ -419,7 +433,7 @@ func (db *DBClient) UpdateApplication(ctx context.Context, id string, appUpdate 
 	return put[*types.Application](endpoint, db.getAuthHeaderForWrite(), appUpdateJSON, db.httpClient)
 }
 
-// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - PUT `<base URL>/<version>/first_date_surpassed`
+// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - POST `<base URL>/<version>/first_date_surpassed`
 func (db *DBClient) UpdateAppFirstDateSurpassed(ctx context.Context, updateInput types.UpdateFirstDateSurpassed) ([]*types.Application, error) {
 	firstDateSurpassedJSON, err := json.Marshal(updateInput)
 	if err != nil {
