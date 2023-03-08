@@ -89,7 +89,7 @@ type (
 		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
 		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
-		UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, email string, roleName types.RoleName) (*types.LoadBalancer, error)
+		UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, update types.UpdateUserAccess) (*types.LoadBalancer, error)
 		// AcceptLoadBalancerUser updates a single User's UserID and Accepted fields for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/accept`
 		AcceptLoadBalancerUser(ctx context.Context, email, loadBalancerID, userID string) (*types.LoadBalancer, error)
 		// RemoveLoadBalancer removes a single LoadBalancer by updating its user field to null - PUT `<base URL>/<version>/load_balancer/{id}` with Remove: true
@@ -128,23 +128,24 @@ var ValidAPIVersions = map[APIVersion]bool{
 }
 
 var (
-	errBaseURLNotProvided      error = errors.New("base URL not provided")
-	errAPIKeyNotProvided       error = errors.New("API key not provided")
-	errVersionNotProvided      error = errors.New("version not provided")
-	errInvalidVersionProvided  error = errors.New("invalid version provided")
-	errNoUserID                error = errors.New("no user ID")
-	errNoBlockchainID          error = errors.New("no blockchain ID")
-	errNoApplicationID         error = errors.New("no application ID")
-	errNoEmail                 error = errors.New("no user email")
-	errNoLoadBalancerID        error = errors.New("no load balancer ID")
-	errNoPayPlanType           error = errors.New("no pay plan type")
-	errInvalidBlockchainJSON   error = errors.New("invalid blockchain JSON")
-	errInvalidAppJSON          error = errors.New("invalid application JSON")
-	errInvalidLoadBalancerJSON error = errors.New("invalid load balancer JSON")
-	errInvalidActivationJSON   error = errors.New("invalid active field JSON")
-	errInvalidRoleName         error = errors.New("invalid role name")
-	errInvalidRoleNameFilter   error = errors.New("invalid role name filter")
-	errResponseNotOK           error = errors.New("Response not OK")
+	errBaseURLNotProvided       error = errors.New("base URL not provided")
+	errAPIKeyNotProvided        error = errors.New("API key not provided")
+	errVersionNotProvided       error = errors.New("version not provided")
+	errInvalidVersionProvided   error = errors.New("invalid version provided")
+	errNoUserID                 error = errors.New("no user ID")
+	errNoBlockchainID           error = errors.New("no blockchain ID")
+	errNoApplicationID          error = errors.New("no application ID")
+	errNoEmail                  error = errors.New("no user email")
+	errNoLoadBalancerID         error = errors.New("no load balancer ID")
+	errNoPayPlanType            error = errors.New("no pay plan type")
+	errInvalidBlockchainJSON    error = errors.New("invalid blockchain JSON")
+	errInvalidAppJSON           error = errors.New("invalid application JSON")
+	errInvalidLoadBalancerJSON  error = errors.New("invalid load balancer JSON")
+	errInvalidActivationJSON    error = errors.New("invalid active field JSON")
+	errInvalidRoleName          error = errors.New("invalid role name")
+	errOwnerRequiresUpdateEmail error = errors.New("transferring ownership requires providing the updater's email")
+	errInvalidRoleNameFilter    error = errors.New("invalid role name filter")
+	errResponseNotOK            error = errors.New("Response not OK")
 )
 
 // NewDBClient returns a read-write HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
@@ -478,21 +479,29 @@ func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate 
 }
 
 // UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
-func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID, email string, roleName types.RoleName) (*types.LoadBalancer, error) {
+func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, update types.UpdateUserAccess) (*types.LoadBalancer, error) {
 	if loadBalancerID == "" {
 		return nil, errNoLoadBalancerID
 	}
-	if email == "" {
+	if update.Email == "" {
 		return nil, errNoEmail
 	}
-	if roleName == types.RoleName("") || !types.ValidRoleNames[roleName] {
+	if update.RoleName == types.RoleName("") || !types.ValidRoleNames[update.RoleName] {
 		return nil, errInvalidRoleName
 	}
+	if update.RoleName == types.RoleOwner && update.UpdaterEmail == "" {
+		return nil, errOwnerRequiresUpdateEmail
+	}
 
-	loadBalancerUserUpdateJSON, err := json.Marshal(types.UpdateUserAccess{
-		Email:    email,
-		RoleName: roleName,
-	})
+	updateStruct := types.UpdateUserAccess{
+		Email:    update.Email,
+		RoleName: update.RoleName,
+	}
+	if update.RoleName == types.RoleOwner {
+		updateStruct.UpdaterEmail = update.UpdaterEmail
+	}
+
+	loadBalancerUserUpdateJSON, err := json.Marshal(updateStruct)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidLoadBalancerJSON, err)
 	}

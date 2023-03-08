@@ -76,7 +76,6 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						Blockchain:        "pokt-mainnet",
 						Description:       "POKT Network Mainnet",
 						EnforceResult:     "JSON",
-						Network:           "POKT-mainnet",
 						Ticker:            "POKT",
 						BlockchainAliases: []string{"pokt-mainnet"},
 						LogLimitBlocks:    100_000,
@@ -95,7 +94,6 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						},
 						SyncCheckOptions: types.SyncCheckOptions{
 							Body:      `{}`,
-							Path:      "/v1/query/height",
 							ResultKey: "height",
 							Allowance: 1,
 						},
@@ -110,7 +108,6 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						ChainIDCheck:      `{\"method\":\"eth_chainId\",\"id\":1,\"jsonrpc\":\"2.0\"}`,
 						Description:       "Ethereum Mainnet",
 						EnforceResult:     "JSON",
-						Network:           "ETH-1",
 						Ticker:            "ETH",
 						BlockchainAliases: []string{"eth-mainnet"},
 						LogLimitBlocks:    100_000,
@@ -159,7 +156,6 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 					ChainIDCheck:      `{\"method\":\"eth_chainId\",\"id\":1,\"jsonrpc\":\"2.0\"}`,
 					Description:       "Ethereum Mainnet",
 					EnforceResult:     "JSON",
-					Network:           "ETH-1",
 					Ticker:            "ETH",
 					BlockchainAliases: []string{"eth-mainnet"},
 					LogLimitBlocks:    100_000,
@@ -266,6 +262,37 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						Limit: types.AppLimit{
 							PayPlan:     types.PayPlan{Type: types.Enterprise},
 							CustomLimit: 2_000_000,
+						},
+						NotificationSettings: types.NotificationSettings{
+							SignedUp:      true,
+							Quarter:       false,
+							Half:          false,
+							ThreeQuarters: true,
+							Full:          true,
+						},
+						CreatedAt: mockTimestamp,
+						UpdatedAt: mockTimestamp,
+					},
+					{
+						ID:     "test_app_97djd63jd78r7f",
+						UserID: "test_user_redirect233344",
+						Name:   "pokt_app_789",
+						URL:    "https://test.app789.io",
+						Dummy:  true,
+						Status: types.InService,
+						GatewayAAT: types.GatewayAAT{
+							Address:              "test_58a37510a103f3de57296af882b2603c",
+							ApplicationPublicKey: "test_cc49729227c22f3934a966d99a6be72b",
+							ApplicationSignature: "test_8d5f4a3006b5603bcecfb44a819c272a",
+							ClientPublicKey:      "test_28a54385e49b65a860f61db62449703b",
+							PrivateKey:           "test_8d5f4a3006b5603bcecfb44a819c272a",
+						},
+						GatewaySettings: types.GatewaySettings{
+							SecretKey:         "test_8fd84jf74jf83kd83kd92okg355",
+							SecretKeyRequired: false,
+						},
+						Limit: types.AppLimit{
+							PayPlan: types.PayPlan{Type: types.PayAsYouGoV0, Limit: 0},
 						},
 						NotificationSettings: types.NotificationSettings{
 							SignedUp:      true,
@@ -492,7 +519,39 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							StickyMax:     600,
 							Stickiness:    false,
 						},
-						Applications: []*types.Application{nil},
+						Applications: []*types.Application{
+							{
+								ID:     "test_app_97djd63jd78r7f",
+								UserID: "test_user_redirect233344",
+								Name:   "pokt_app_789",
+								URL:    "https://test.app789.io",
+								Dummy:  true,
+								Status: types.InService,
+								GatewayAAT: types.GatewayAAT{
+									Address:              "test_58a37510a103f3de57296af882b2603c",
+									ApplicationPublicKey: "test_cc49729227c22f3934a966d99a6be72b",
+									ApplicationSignature: "test_8d5f4a3006b5603bcecfb44a819c272a",
+									ClientPublicKey:      "test_28a54385e49b65a860f61db62449703b",
+									PrivateKey:           "test_8d5f4a3006b5603bcecfb44a819c272a",
+								},
+								GatewaySettings: types.GatewaySettings{
+									SecretKey:         "test_8fd84jf74jf83kd83kd92okg355",
+									SecretKeyRequired: false,
+								},
+								Limit: types.AppLimit{
+									PayPlan: types.PayPlan{Type: types.PayAsYouGoV0, Limit: 0},
+								},
+								NotificationSettings: types.NotificationSettings{
+									SignedUp:      true,
+									Quarter:       false,
+									Half:          false,
+									ThreeQuarters: true,
+									Full:          true,
+								},
+								CreatedAt: mockTimestamp,
+								UpdatedAt: mockTimestamp,
+							},
+						},
 						Users: []types.UserAccess{
 							{RoleName: types.RoleOwner, UserID: "test_user_redirect233344", Email: "owner3@test.com", Accepted: true},
 							{RoleName: types.RoleMember, UserID: "", Email: "member2@test.com", Accepted: false},
@@ -845,7 +904,39 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							StickyMax:     600,
 							Stickiness:    false,
 						},
-						Applications: []*types.Application{nil},
+						Applications: []*types.Application{
+							{
+								ID:     "test_app_97djd63jd78r7f",
+								UserID: "test_user_redirect233344",
+								Name:   "pokt_app_789",
+								URL:    "https://test.app789.io",
+								Dummy:  true,
+								Status: types.InService,
+								GatewayAAT: types.GatewayAAT{
+									Address:              "test_58a37510a103f3de57296af882b2603c",
+									ApplicationPublicKey: "test_cc49729227c22f3934a966d99a6be72b",
+									ApplicationSignature: "test_8d5f4a3006b5603bcecfb44a819c272a",
+									ClientPublicKey:      "test_28a54385e49b65a860f61db62449703b",
+									PrivateKey:           "test_8d5f4a3006b5603bcecfb44a819c272a",
+								},
+								GatewaySettings: types.GatewaySettings{
+									SecretKey:         "test_8fd84jf74jf83kd83kd92okg355",
+									SecretKeyRequired: false,
+								},
+								Limit: types.AppLimit{
+									PayPlan: types.PayPlan{Type: types.PayAsYouGoV0, Limit: 0},
+								},
+								NotificationSettings: types.NotificationSettings{
+									SignedUp:      true,
+									Quarter:       false,
+									Half:          false,
+									ThreeQuarters: true,
+									Full:          true,
+								},
+								CreatedAt: mockTimestamp,
+								UpdatedAt: mockTimestamp,
+							},
+						},
 						Users: []types.UserAccess{
 							{RoleName: types.RoleOwner, UserID: "test_user_redirect233344", Email: "owner3@test.com", Accepted: true},
 							{RoleName: types.RoleMember, UserID: "", Email: "member2@test.com", Accepted: false},
@@ -999,7 +1090,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					Blockchain:        "pol-mainnet",
 					Description:       "Polygon Mainnet",
 					EnforceResult:     "JSON",
-					Network:           "POL-mainnet",
 					Ticker:            "POL",
 					BlockchainAliases: []string{"pol-mainnet"},
 					LogLimitBlocks:    100000,
@@ -1016,7 +1106,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					Blockchain:        "pol-mainnet",
 					Description:       "Polygon Mainnet",
 					EnforceResult:     "JSON",
-					Network:           "POL-mainnet",
 					Ticker:            "POL",
 					BlockchainAliases: []string{"pol-mainnet"},
 					LogLimitBlocks:    100000,
@@ -1037,7 +1126,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					Blockchain:        "pol-mainnet",
 					Description:       "Polygon Mainnet",
 					EnforceResult:     "JSON",
-					Network:           "POL-mainnet",
 					Ticker:            "POL",
 					BlockchainAliases: []string{"pol-mainnet"},
 					LogLimitBlocks:    100000,
@@ -1065,13 +1153,11 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				ts.Equal(test.blockchain.ChainIDCheck, blockchain.ChainIDCheck)
 				ts.Equal(test.blockchain.Description, blockchain.Description)
 				ts.Equal(test.blockchain.EnforceResult, blockchain.EnforceResult)
-				ts.Equal(test.blockchain.Network, blockchain.Network)
 				ts.Equal(test.blockchain.Path, blockchain.Path)
 				ts.Equal(test.blockchain.Ticker, blockchain.Ticker)
 				ts.Equal(test.blockchain.BlockchainAliases, blockchain.BlockchainAliases)
 				ts.Equal(test.blockchain.LogLimitBlocks, blockchain.LogLimitBlocks)
 				ts.Equal(test.blockchain.RequestTimeout, blockchain.RequestTimeout)
-				ts.Equal(test.blockchain.SyncAllowance, blockchain.SyncAllowance)
 				ts.Equal(test.blockchain.Active, blockchain.Active)
 				ts.Equal(test.blockchain.SyncCheckOptions, blockchain.SyncCheckOptions)
 				ts.NotEmpty(blockchain.CreatedAt)
@@ -1565,9 +1651,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					RequestTimeout:    66_654,
 					ResultKey:         "updated-key",
 					LogLimitBlocks:    100_010,
-					Network:           "new-network",
 					Ticker:            "SUCH-WOW",
-					SyncCheckPath:     "/v1/query/wow-new",
 					BlockchainAliases: []string{"pokt-mainnet", "another-one"},
 					EnforceResult:     "JSON-2",
 					Path:              "new-path",
@@ -1579,7 +1663,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					Blockchain:        "pokt-mainnet-updated",
 					Description:       "POKT Network Mainnet Updated",
 					EnforceResult:     "JSON-2",
-					Network:           "new-network",
 					Ticker:            "SUCH-WOW",
 					Path:              "new-path",
 					BlockchainAliases: []string{"pokt-mainnet", "another-one"},
@@ -1600,7 +1683,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					},
 					SyncCheckOptions: types.SyncCheckOptions{
 						Body:      `{"new-body": "alliance"}`,
-						Path:      "/v1/query/wow-new",
 						ResultKey: "updated-key",
 						Allowance: 1,
 					},
@@ -1621,13 +1703,11 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				ts.Equal(test.blockchainAfterUpdate.Description, updatedBlockchain.Description)
 				ts.Equal(test.blockchainAfterUpdate.RequestTimeout, updatedBlockchain.RequestTimeout)
 				ts.Equal(test.blockchainAfterUpdate.LogLimitBlocks, updatedBlockchain.LogLimitBlocks)
-				ts.Equal(test.blockchainAfterUpdate.Network, updatedBlockchain.Network)
 				ts.Equal(test.blockchainAfterUpdate.Ticker, updatedBlockchain.Ticker)
 				ts.Equal(test.blockchainAfterUpdate.BlockchainAliases, updatedBlockchain.BlockchainAliases)
 				ts.Equal(test.blockchainAfterUpdate.EnforceResult, updatedBlockchain.EnforceResult)
 				ts.Equal(test.blockchainAfterUpdate.Path, updatedBlockchain.Path)
 				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.ResultKey, updatedBlockchain.SyncCheckOptions.ResultKey)
-				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.Path, updatedBlockchain.SyncCheckOptions.Path)
 				ts.Equal(test.blockchainAfterUpdate.SyncCheckOptions.Body, updatedBlockchain.SyncCheckOptions.Body)
 			}
 		}
@@ -1700,17 +1780,19 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 
 	ts.Run("Test_UpdateLoadBalancerUserRole", func() {
 		tests := []struct {
-			name                  string
-			loadBalancerID, email string
-			roleName              types.RoleName
-			loadBalancerUsers     []types.UserAccess
-			err                   error
+			name              string
+			loadBalancerID    string
+			update            types.UpdateUserAccess
+			loadBalancerUsers []types.UserAccess
+			err               error
 		}{
 			{
-				name:           "Should update a single user to an existing load balancer in the DB",
+				name:           "Should update a single user for an existing load balancer in the DB",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				email:          "member1@test.com",
-				roleName:       types.RoleAdmin,
+				update: types.UpdateUserAccess{
+					Email:    "member1@test.com",
+					RoleName: types.RoleAdmin,
+				},
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
 					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
@@ -1719,16 +1801,125 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				},
 			},
 			{
-				name:           "Should update a single user to an existing load balancer in the DB",
+				name:           "Should update a single user for an existing load balancer in the DB",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				email:          "member1@test.com",
-				roleName:       types.RoleMember,
+				update: types.UpdateUserAccess{
+					Email:    "member1@test.com",
+					RoleName: types.RoleMember,
+				},
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
 					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
 					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
 					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
 				},
+			},
+			{
+				name:           "Should transfer ownership for an existing load balancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				update: types.UpdateUserAccess{
+					Email:        "admin1@test.com",
+					RoleName:     types.RoleOwner,
+					UpdaterEmail: "owner1@test.com",
+				},
+				loadBalancerUsers: []types.UserAccess{
+					{RoleName: types.RoleAdmin, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
+					{RoleName: types.RoleOwner, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+				},
+			},
+			{
+				name:           "Should transfer ownership again for an existing load balancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				update: types.UpdateUserAccess{
+					Email:        "member1@test.com",
+					RoleName:     types.RoleOwner,
+					UpdaterEmail: "admin1@test.com",
+				},
+				loadBalancerUsers: []types.UserAccess{
+					{RoleName: types.RoleAdmin, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
+					{RoleName: types.RoleOwner, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+				},
+			},
+			{
+				name:           "Should transfer ownership back to original owner for an existing load balancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				update: types.UpdateUserAccess{
+					Email:        "owner1@test.com",
+					RoleName:     types.RoleOwner,
+					UpdaterEmail: "member1@test.com",
+				},
+				loadBalancerUsers: []types.UserAccess{
+					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+				},
+			},
+			{
+				name:           "Should update a single user back to member for an existing load balancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				update: types.UpdateUserAccess{
+					Email:    "member1@test.com",
+					RoleName: types.RoleMember,
+				},
+				loadBalancerUsers: []types.UserAccess{
+					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+				},
+			},
+			{
+				name:           "Should update a single unaccepted user to ADMIN for an existing load balancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				update: types.UpdateUserAccess{
+					Email:    "member_new@test.com",
+					RoleName: types.RoleAdmin,
+				},
+				loadBalancerUsers: []types.UserAccess{
+					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "", Email: "member_new@test.com", Accepted: false},
+				},
+			},
+			{
+				name:           "Should update a single unaccepted user back to MEMBER for an existing load balancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				update: types.UpdateUserAccess{
+					Email:    "member_new@test.com",
+					RoleName: types.RoleMember,
+				},
+				loadBalancerUsers: []types.UserAccess{
+					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+				},
+			},
+			{
+				name:           "Should fail if attempting to transfer ownership and the UpdaterEmail is not provided",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				update: types.UpdateUserAccess{
+					Email:        "member1@test.com",
+					RoleName:     types.RoleOwner,
+					UpdaterEmail: "",
+				},
+				err: errOwnerRequiresUpdateEmail,
+			},
+			{
+				name:           "Should fail if attempting to transfer ownership and the user has not accepted their invite",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				update: types.UpdateUserAccess{
+					Email:        "member_new@test.com",
+					RoleName:     types.RoleOwner,
+					UpdaterEmail: "owner1@test.com",
+				},
+				err: fmt.Errorf("Response not OK. 500 Internal Server Error: error: cannot set a user to owner if they have not yet accepted their invitation"),
 			},
 			{
 				name:           "Should fail if load balancer ID not provided",
@@ -1738,33 +1929,42 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name:           "Should fail if user email not provided",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				email:          "",
-				err:            errNoEmail,
+				update: types.UpdateUserAccess{
+					Email:    "",
+					RoleName: types.RoleMember,
+				},
+				err: errNoEmail,
 			},
 			{
 				name:           "Should fail if invalid role name provided",
 				loadBalancerID: "test_lb_34987u329rfn23f",
-				email:          "test_user_member1234",
-				roleName:       types.RoleName("wrong_one"),
-				err:            errInvalidRoleName,
+				update: types.UpdateUserAccess{
+					Email:    "member1@test.com",
+					RoleName: types.RoleName("wrong_one"),
+				},
+				err: errInvalidRoleName,
 			},
 			{
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "im_not_here",
-				email:          "test_user_member1234",
-				roleName:       types.RoleMember,
-				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				update: types.UpdateUserAccess{
+					Email:    "member1@test.com",
+					RoleName: types.RoleMember,
+				},
+				err: fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
 			},
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.UpdateLoadBalancerUserRole(testCtx, test.loadBalancerID, test.email, test.roleName)
-			ts.Equal(test.err, err)
-			if test.err == nil {
-				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+			ts.Run(test.name, func() {
+				_, err := ts.client.UpdateLoadBalancerUserRole(testCtx, test.loadBalancerID, test.update)
 				ts.Equal(test.err, err)
-				ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
-			}
+				if test.err == nil {
+					loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+					ts.Equal(test.err, err)
+					ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
+				}
+			})
 		}
 	})
 
