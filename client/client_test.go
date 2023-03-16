@@ -960,6 +960,32 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}
 	})
 
+	ts.Run("Test_GetPendingLoadBalancersByEmail", func() {
+		tests := []struct {
+			name          string
+			userEmail     string
+			expectedCount int
+			err           error
+		}{
+			{
+				name:          "Should return the number of loadBalancers owned by email",
+				userEmail:     "owner1@test.com",
+				expectedCount: 1,
+			},
+			{
+				name:          "return 0 if there's no loadbalancer binded with the email",
+				userEmail:     "random@test.com",
+				expectedCount: 0,
+			},
+		}
+
+		for _, test := range tests {
+			loadBalancerCount, err := ts.client.GetLoadBalancersCountByEmail(testCtx, test.userEmail)
+			ts.Equal(test.err, err)
+			ts.Equal(test.expectedCount, loadBalancerCount)
+		}
+	})
+
 	ts.Run("Test_GetPayPlans", func() {
 		tests := []struct {
 			name             string

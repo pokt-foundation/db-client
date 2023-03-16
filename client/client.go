@@ -57,6 +57,8 @@ type (
 		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
 		// GetPendingLoadBalancersByEmail returns all the pending load balancers for an email - GET `<base URL>/<version>/user/{email}/load_balancer/pending`.*/
 		GetPendingLoadBalancersByEmail(ctx context.Context, email string) ([]*types.LoadBalancer, error)
+		// GetLoadBalancersCountByEmail returns the number of loadbalancers owned by an email - GET `<base URL>/<version>/user/{email}/load_balancer/count`.`
+		GetLoadBalancersCountByEmail(ctx context.Context, email string) (int, error)
 		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
 		// GetPayPlanByType returns a single Pay Plan by its type - GET `<base URL>/<version>/pay_plan/{type}`
@@ -116,6 +118,7 @@ const (
 	permissionPath         subPath = "permission"
 	acceptPath             subPath = "accept"
 	pendingPath            subPath = "pending"
+	countPath              subPath = "count"
 )
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
@@ -309,6 +312,17 @@ func (db *DBClient) GetPendingLoadBalancersByEmail(ctx context.Context, email st
 	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(userPath), email, loadBalancerPath, pendingPath)
 
 	return get[[]*types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetLoadBalancersCountByEmail returns all the pending load balancers for an email - GET `<base URL>/<version>/user/{email}/load_balancer/count`.*/
+func (db *DBClient) GetLoadBalancersCountByEmail(ctx context.Context, email string) (int, error) {
+	if email == "" {
+		return 0, errNoEmail
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(userPath), email, loadBalancerPath, countPath)
+
+	return get[int](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 // GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
