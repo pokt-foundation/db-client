@@ -960,7 +960,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}
 	})
 
-	ts.Run("Test_GetPendingLoadBalancersByEmail", func() {
+	ts.Run("Test_GetLoadBalancersCountByEmail", func() {
 		tests := []struct {
 			name          string
 			userEmail     string
