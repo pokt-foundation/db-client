@@ -78,6 +78,8 @@ type (
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
 		// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
 		CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error)
+		// CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`
+		CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput types.AccountIntegrations) (*types.LoadBalancer, error)
 		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
 		// UpdateApplication updates a single Application in the DB - PUT `<base URL>/<version>/application/{id}`
@@ -144,6 +146,7 @@ var (
 	errInvalidBlockchainJSON    error = errors.New("invalid blockchain JSON")
 	errInvalidAppJSON           error = errors.New("invalid application JSON")
 	errInvalidLoadBalancerJSON  error = errors.New("invalid load balancer JSON")
+	errInvalidIntegrationsJSON  error = errors.New("invalid integrations JSON")
 	errInvalidActivationJSON    error = errors.New("invalid active field JSON")
 	errInvalidRoleName          error = errors.New("invalid role name")
 	errOwnerRequiresUpdateEmail error = errors.New("transferring ownership requires providing the updater's email")
@@ -412,6 +415,18 @@ func (db *DBClient) CreateLoadBalancerUser(ctx context.Context, loadBalancerID s
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath)
 
 	return post[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUserJSON, db.httpClient)
+}
+
+// CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`
+func (db *DBClient) CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput types.AccountIntegrations) (*types.LoadBalancer, error) {
+	integrationsJSON, err := json.Marshal(integrationsInput)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidIntegrationsJSON, err)
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, "integration")
+
+	return post[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), integrationsJSON, db.httpClient)
 }
 
 /* -- Update Methods -- */

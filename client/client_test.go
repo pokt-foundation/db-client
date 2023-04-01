@@ -443,6 +443,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
 						ID:                "test_lb_34987u329rfn23f",
+						AccountID:         "account1",
 						Name:              "pokt_app_123",
 						UserID:            "test_user_1dbffbdfeeb225",
 						RequestTimeout:    5_000,
@@ -453,6 +454,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							StickyOrigins: []string{"chrome-extension://", "moz-extension://"},
 							StickyMax:     300,
 							Stickiness:    true,
+						},
+						Integrations: types.AccountIntegrations{
+							CovalentAPIKeyFree: "test_covalent_api_key_1",
 						},
 						Applications: []*types.Application{
 							{
@@ -508,6 +512,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 					},
 					{
 						ID:                "test_lb_34gg4g43g34g5hh",
+						AccountID:         "account3",
 						Name:              "test_lb_redirect",
 						UserID:            "test_user_redirect233344",
 						RequestTimeout:    5_000,
@@ -561,6 +566,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 					},
 					{
 						ID:                "test_lb_3890ru23jfi32fj",
+						AccountID:         "account2",
 						Name:              "pokt_app_456",
 						UserID:            "test_user_04228205bd261a",
 						RequestTimeout:    5_000,
@@ -571,6 +577,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							StickyOrigins: []string{"chrome-extension://"},
 							StickyMax:     400,
 							Stickiness:    true,
+						},
+						Integrations: types.AccountIntegrations{
+							CovalentAPIKeyFree: "test_covalent_api_key_2",
 						},
 						Applications: []*types.Application{
 							{
@@ -636,6 +645,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				loadBalancerID: "test_lb_3890ru23jfi32fj",
 				expectedLoadBalancer: &types.LoadBalancer{
 					ID:                "test_lb_3890ru23jfi32fj",
+					AccountID:         "account2",
 					Name:              "pokt_app_456",
 					UserID:            "test_user_04228205bd261a",
 					RequestTimeout:    5_000,
@@ -646,6 +656,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						StickyOrigins: []string{"chrome-extension://"},
 						StickyMax:     400,
 						Stickiness:    true,
+					},
+					Integrations: types.AccountIntegrations{
+						CovalentAPIKeyFree: "test_covalent_api_key_2",
 					},
 					Applications: []*types.Application{
 						{
@@ -717,6 +730,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
 						ID:                "test_lb_34987u329rfn23f",
+						AccountID:         "account1",
 						Name:              "pokt_app_123",
 						UserID:            "test_user_1dbffbdfeeb225",
 						RequestTimeout:    5_000,
@@ -727,6 +741,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							StickyOrigins: []string{"chrome-extension://", "moz-extension://"},
 							StickyMax:     300,
 							Stickiness:    true,
+						},
+						Integrations: types.AccountIntegrations{
+							CovalentAPIKeyFree: "test_covalent_api_key_1",
 						},
 						Applications: []*types.Application{
 							{
@@ -789,6 +806,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
 						ID:                "test_lb_34987u329rfn23f",
+						AccountID:         "account1",
 						Name:              "pokt_app_123",
 						UserID:            "test_user_1dbffbdfeeb225",
 						RequestTimeout:    5_000,
@@ -799,6 +817,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							StickyOrigins: []string{"chrome-extension://", "moz-extension://"},
 							StickyMax:     300,
 							Stickiness:    true,
+						},
+						Integrations: types.AccountIntegrations{
+							CovalentAPIKeyFree: "test_covalent_api_key_1",
 						},
 						Applications: []*types.Application{
 							{
@@ -893,6 +914,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
 						ID:                "test_lb_34gg4g43g34g5hh",
+						AccountID:         "account3",
 						Name:              "test_lb_redirect",
 						UserID:            "test_user_redirect233344",
 						RequestTimeout:    5_000,
@@ -1484,6 +1506,62 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 				ts.Equal(test.err, err)
 				ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
+			}
+		}
+	})
+
+	ts.Run("Test_CreateLoadBalancerIntegration", func() {
+		tests := []struct {
+			name                 string
+			loadBalancerID       string
+			integrationsInput    types.AccountIntegrations
+			expectedIntegrations types.AccountIntegrations
+			err                  error
+		}{
+			{
+				name:           "Should add new account integrations to a load balancer in the DB",
+				loadBalancerID: "test_lb_34gg4g43g34g5hh",
+				integrationsInput: types.AccountIntegrations{
+					AccountID:          "account3",
+					CovalentAPIKeyFree: "free_api_key_123",
+					CovalentAPIKeyPaid: "paid_api_key_123",
+				},
+				expectedIntegrations: types.AccountIntegrations{
+					AccountID:          "account3",
+					CovalentAPIKeyFree: "free_api_key_123",
+					CovalentAPIKeyPaid: "paid_api_key_123",
+				},
+			},
+			{
+				name:           "Should update existing account integrations for a load balancer in the DB",
+				loadBalancerID: "test_lb_34987u329rfn23f",
+				integrationsInput: types.AccountIntegrations{
+					AccountID:          "account1",
+					CovalentAPIKeyFree: "free_api_key_456",
+					CovalentAPIKeyPaid: "paid_api_key_456",
+				},
+				expectedIntegrations: types.AccountIntegrations{
+					AccountID:          "account1",
+					CovalentAPIKeyFree: "free_api_key_456",
+					CovalentAPIKeyPaid: "paid_api_key_456",
+				},
+			},
+			{
+				name:           "Should fail if load balancer cannot be found",
+				loadBalancerID: "sir_not_appearing_in_this_film",
+				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+			},
+		}
+
+		for _, test := range tests {
+			updatedLB, err := ts.client.CreateLoadBalancerIntegration(testCtx, test.loadBalancerID, test.integrationsInput)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				ts.Equal(test.expectedIntegrations, updatedLB.Integrations)
+
+				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+				ts.Equal(test.err, err)
+				ts.Equal(test.expectedIntegrations, loadBalancer.Integrations)
 			}
 		}
 	})
