@@ -901,16 +901,16 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}
 	})
 
-	ts.Run("Test_GetPendingLoadBalancersByEmail", func() {
+	ts.Run("Test_GetPendingLoadBalancersByUserID", func() {
 		tests := []struct {
 			name                  string
-			userEmail             string
+			userID                string
 			expectedLoadBalancers []*types.LoadBalancer
 			err                   error
 		}{
 			{
-				name:      "Should fetch all pending load balancers for a single user email",
-				userEmail: "member2@test.com",
+				name:   "Should fetch all pending load balancers for a single user email",
+				userID: "member2@test.com",
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
 						ID:                "test_lb_34gg4g43g34g5hh",
@@ -969,40 +969,40 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				},
 			},
 			{
-				name:      "Should fail if the email does not have any pending load balancers in the DB",
-				userEmail: "test_not_real@user.com",
-				err:       fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				name:   "Should fail if the email does not have any pending load balancers in the DB",
+				userID: "test_not_real@user.com",
+				err:    fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
 			},
 		}
 
 		for _, test := range tests {
-			pendingLoadBalancersByEmail, err := ts.client.GetPendingLoadBalancersByEmail(testCtx, test.userEmail)
+			pendingLoadBalancersByEmail, err := ts.client.GetPendingLoadBalancersByUserID(testCtx, test.userID)
 			ts.Equal(test.err, err)
 			ts.Equal(test.expectedLoadBalancers, pendingLoadBalancersByEmail)
 		}
 	})
 
-	ts.Run("Test_GetLoadBalancersCountByEmail", func() {
+	ts.Run("Test_GetLoadBalancersCountByUserID", func() {
 		tests := []struct {
 			name          string
-			userEmail     string
+			userID        string
 			expectedCount int
 			err           error
 		}{
 			{
 				name:          "Should return the number of loadBalancers owned by email",
-				userEmail:     "owner1@test.com",
+				userID:        "owner1@test.com",
 				expectedCount: 1,
 			},
 			{
 				name:          "return 0 if there's no loadbalancer binded with the email",
-				userEmail:     "random@test.com",
+				userID:        "random@test.com",
 				expectedCount: 0,
 			},
 		}
 
 		for _, test := range tests {
-			loadBalancerCount, err := ts.client.GetLoadBalancersCountByEmail(testCtx, test.userEmail)
+			loadBalancerCount, err := ts.client.GetLoadBalancersCountByUserID(testCtx, test.userID)
 			ts.Equal(test.err, err)
 			ts.Equal(test.expectedCount, loadBalancerCount)
 		}
@@ -1601,7 +1601,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 	})
 
-	ts.Run("Test_UpdateApplication", func() {
+	ts.Run("Test_UpdateLoadBalancer", func() {
 		tests := []struct {
 			name                   string
 			applicationID          string
@@ -1647,7 +1647,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 
 		for _, test := range tests {
-			createdApp, err := ts.client.UpdateApplication(testCtx, test.applicationID, test.applicationUpdate)
+			createdApp, err := ts.client.UpdateLoadBalancer(testCtx, test.applicationID, test.applicationUpdate)
 			ts.Equal(test.err, err)
 			if err == nil {
 				application, err := ts.client.GetApplicationByID(testCtx, createdApp.ID)
@@ -1817,71 +1817,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 	})
 
-	ts.Run("Test_UpdateLoadBalancer", func() {
-		tests := []struct {
-			name                    string
-			loadBalancerID          string
-			loadBalancerUpdate      types.UpdateLoadBalancer
-			loadBalancerAfterUpdate types.LoadBalancer
-			err                     error
-		}{
-			{
-				name:           "Should update a single loadBalancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				loadBalancerUpdate: types.UpdateLoadBalancer{
-					Name: "pokt_app_updated",
-					StickyOptions: &types.UpdateStickyOptions{
-						Duration:      "100",
-						StickyOrigins: []string{"chrome-extension://", "test-ext://"},
-						StickyMax:     500,
-						Stickiness:    boolPointer(false),
-					},
-				},
-				loadBalancerAfterUpdate: types.LoadBalancer{
-					Name: "pokt_app_updated",
-					StickyOptions: types.StickyOptions{
-						Duration:      "100",
-						StickyOrigins: []string{"chrome-extension://", "test-ext://"},
-						StickyMax:     500,
-						Stickiness:    false,
-					},
-				},
-			},
-			{
-				name:           "Should update only the name of a single loadBalancer in the DB",
-				loadBalancerID: "test_lb_3890ru23jfi32fj",
-				loadBalancerUpdate: types.UpdateLoadBalancer{
-					Name: "pokt_app_updated_2",
-				},
-				loadBalancerAfterUpdate: types.LoadBalancer{
-					Name: "pokt_app_updated_2",
-					StickyOptions: types.StickyOptions{
-						Duration:      "40",
-						StickyOrigins: []string{"chrome-extension://"},
-						StickyMax:     400,
-						Stickiness:    true,
-					},
-				},
-			},
-			{
-				name:           "Should fail if load balancer cannot be found",
-				loadBalancerID: "9000",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
-			},
-		}
-
-		for _, test := range tests {
-			updatedLB, err := ts.client.UpdateLoadBalancer(testCtx, test.loadBalancerID, test.loadBalancerUpdate)
-			ts.Equal(test.err, err)
-			if err == nil {
-				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, updatedLB.ID)
-				ts.Equal(test.err, err)
-				ts.Equal(test.loadBalancerAfterUpdate.Name, loadBalancer.Name)
-				ts.Equal(test.loadBalancerAfterUpdate.StickyOptions, loadBalancer.StickyOptions)
-			}
-		}
-	})
-
 	ts.Run("Test_UpdateLoadBalancerUserRole", func() {
 		tests := []struct {
 			name              string
@@ -2034,10 +1969,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				name:           "Should fail if user email not provided",
 				loadBalancerID: "test_lb_34987u329rfn23f",
 				update: types.UpdateUserAccess{
-					Email:    "",
+					UserID:   "",
 					RoleName: types.RoleMember,
 				},
-				err: errNoEmail,
+				err: errNoUserID,
 			},
 			{
 				name:           "Should fail if invalid role name provided",
@@ -2074,14 +2009,13 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 
 	ts.Run("Test_AcceptLoadBalancerUser", func() {
 		tests := []struct {
-			name                          string
-			email, loadBalancerID, userID string
-			loadBalancerUsers             []types.UserAccess
-			err                           error
+			name                   string
+			loadBalancerID, userID string
+			loadBalancerUsers      []types.UserAccess
+			err                    error
 		}{
 			{
 				name:           "Should update a single user's ID and Accepted field for an existing load balancer in the DB",
-				email:          "member_new@test.com",
 				loadBalancerID: "test_lb_34987u329rfn23f",
 				userID:         "test_user_accept_member",
 				loadBalancerUsers: []types.UserAccess{
@@ -2092,26 +2026,18 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				},
 			},
 			{
-				name:  "Should fail if email not provided",
-				email: "",
-				err:   errNoEmail,
-			},
-			{
 				name:           "Should fail if load balancer ID not provided",
-				email:          "member_new@test.com",
 				loadBalancerID: "",
 				err:            errNoLoadBalancerID,
 			},
 			{
 				name:           "Should fail if user ID not provided",
-				email:          "member_new@test.com",
 				loadBalancerID: "test_lb_34987u329rfn23f",
 				userID:         "",
 				err:            errNoUserID,
 			},
 			{
 				name:           "Should fail if load balancer cannot be found",
-				email:          "member_new@test.com",
 				loadBalancerID: "im_not_here",
 				userID:         "test_user_accept_member",
 				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
@@ -2119,7 +2045,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.AcceptLoadBalancerUser(testCtx, test.email, test.loadBalancerID, test.userID)
+			_, err := ts.client.AcceptLoadBalancerUser(testCtx, test.loadBalancerID, test.userID)
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
@@ -2189,10 +2115,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				err:            errNoLoadBalancerID,
 			},
 			{
-				name:           "Should fail if email not provided",
+				name:           "Should fail if user ID not provided",
 				loadBalancerID: "test_lb_34987u329rfn23f",
 				email:          "",
-				err:            errNoEmail,
+				err:            errNoUserID,
 			},
 		}
 
