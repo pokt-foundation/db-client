@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pokt-foundation/portal-db/v2/types"
+	"github.com/pokt-foundation/portal-db/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -429,9 +429,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}{
 			{
 				name:          "Should fetch one application by ID",
-				applicationID: "test_app_1",
+				applicationID: "test_protocol_app_1",
 				expectedApplication: &types.Application{
-					ID:                 "test_app_1",
+					ID:                 "test_protocol_app_1",
 					UserID:             "auth0|james_holden",
 					Name:               "pokt_app_123",
 					FirstDateSurpassed: mockTimestamp,
@@ -1231,19 +1231,19 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		tests := []struct {
 			name                string
 			userID              types.UserID
-			expectedPermissions *types.LegacyUserPermissions
+			expectedPermissions *types.UserPermissions
 			err                 error
 		}{
 			{
 
 				name:   "Should fetch a single users load balancer permissions",
 				userID: "auth0|james_holden",
-				expectedPermissions: &types.LegacyUserPermissions{
+				expectedPermissions: &types.UserPermissions{
 					UserID: "auth0|james_holden",
 					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{
 						"test_app_1": {
 							RoleName:    types.RoleOwner,
-							Permissions: []types.Permissions{types.PermReadEndpoint, types.PermWriteEndpoint, types.PermDeleteEndpoint, types.PermTransferEndpoint},
+							Permissions: []types.PermissionsEnum{types.ReadEndpoint, types.WriteEndpoint, types.DeleteEndpoint, types.TransferEndpoint},
 						},
 					},
 				},
@@ -1252,12 +1252,12 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 				name:   "Should fetch another single users load balancer permissions",
 				userID: "auth0|ellen_ripley",
-				expectedPermissions: &types.LegacyUserPermissions{
+				expectedPermissions: &types.UserPermissions{
 					UserID: "auth0|ellen_ripley",
 					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{
 						"test_app_2": {
 							RoleName:    types.RoleOwner,
-							Permissions: []types.Permissions{types.PermReadEndpoint, types.PermWriteEndpoint, types.PermDeleteEndpoint, types.PermTransferEndpoint},
+							Permissions: []types.PermissionsEnum{types.ReadEndpoint, types.WriteEndpoint, types.DeleteEndpoint, types.TransferEndpoint},
 						},
 					},
 				},
@@ -1265,7 +1265,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			{
 				name:   "Should return an empty list if the user exists but has not accepted their invite",
 				userID: "auth0|rick_deckard",
-				expectedPermissions: &types.LegacyUserPermissions{
+				expectedPermissions: &types.UserPermissions{
 					UserID:        "auth0|rick_deckard",
 					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{},
 				},
@@ -1549,8 +1549,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 								Version:              "0.0.1",
 							},
 							GatewaySettings: types.GatewaySettings{
-								SecretKey:         "test_9c9e3b193cfba5348f93bb2f3e3fb794",
-								SecretKeyRequired: false,
+								SecretKey: "test_9c9e3b193cfba5348f93bb2f3e3fb794",
 							},
 							Limit: types.AppLimit{
 								PayPlan: types.PayPlan{Type: types.PayPlanType("pro_plan"), Limit: 5000},
@@ -1679,7 +1678,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}{
 			{
 				name:          "Should update a single application in the DB",
-				applicationID: "test_app_3",
+				applicationID: "test_app_2",
 				applicationUpdate: types.UpdateApplication{
 					Name: "pokt_app_updated_lb",
 					GatewaySettings: &types.UpdateGatewaySettings{
@@ -1690,12 +1689,12 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 						WhitelistBlockchains: []string{"test-chain1"},
 					},
 					NotificationSettings: &types.UpdateNotificationSettings{SignedUp: boolPointer(false), Quarter: boolPointer(true), Half: boolPointer(true), ThreeQuarters: boolPointer(false), Full: boolPointer(false)},
-					Limit:                &types.AppLimit{PayPlan: types.PayPlan{Type: types.PayPlanType("startup_plan"), Limit: 500}},
+					Limit:                &types.AppLimit{PayPlan: types.PayPlan{Type: types.PayPlanType("pro_plan"), Limit: 5000}},
 				},
 				applicationAfterUpdate: types.Application{
 					Name: "pokt_app_updated_lb",
 					GatewaySettings: types.GatewaySettings{
-						SecretKey:            "test_9f48b13e2bc5fd31ab367841f11495c1",
+						SecretKey:            "test_9c9e3b193cfba5348f93bb2f3e3fb794",
 						SecretKeyRequired:    false,
 						WhitelistOrigins:     []string{"test-origin1", "test-origin2"},
 						WhitelistUserAgents:  []string{"test-agent1"},
@@ -1704,7 +1703,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 						WhitelistBlockchains: []string{"test-chain1"},
 					},
 					NotificationSettings: types.NotificationSettings{SignedUp: false, Quarter: true, Half: true, ThreeQuarters: false, Full: false},
-					Limit:                types.AppLimit{PayPlan: types.PayPlan{Type: types.PayPlanType("startup_plan"), Limit: 500}},
+					Limit:                types.AppLimit{PayPlan: types.PayPlan{Type: types.PayPlanType("pro_plan"), Limit: 5000}},
 				},
 			},
 			{
@@ -1715,11 +1714,12 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 
 		for _, test := range tests {
-			//TODO: Review why is updating the application[1] witht he lb
 			createdApp, err := ts.client.UpdateLoadBalancer(testCtx, test.applicationID, test.applicationUpdate)
 			ts.Equal(test.err, err)
 			if err == nil {
-				application, err := ts.client.GetApplicationByID(testCtx, createdApp.ID)
+				// Get the app inside the loadbalancer
+				appID := createdApp.Applications[0].ID
+				application, err := ts.client.GetApplicationByID(testCtx, appID)
 				ts.NoError(err)
 				ts.Equal(test.applicationAfterUpdate.Name, application.Name)
 				ts.Equal(test.applicationAfterUpdate.GatewaySettings, application.GatewaySettings)
@@ -1739,7 +1739,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name: "Should update the app first date suprassed for the provided slice of app IDs",
 				update: types.UpdateFirstDateSurpassed{
-					PortalAppIDs:       []string{"test_app_1", "test_app_2"},
+					ApplicationIDs:     []string{"test_app_2", "test_app_2"},
 					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
 				},
 				expectedDate: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
@@ -1748,7 +1748,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name: "Should fail if update contains no application IDs cannot be found",
 				update: types.UpdateFirstDateSurpassed{
-					PortalAppIDs:       []string{},
+					ApplicationIDs:     []string{},
 					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
 				},
 				err: fmt.Errorf("Response not OK. 400 Bad Request: no application IDs on input"),
@@ -1756,7 +1756,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name: "Should fail if application cannot be found",
 				update: types.UpdateFirstDateSurpassed{
-					PortalAppIDs:       []string{"9000"},
+					ApplicationIDs:     []string{"9000"},
 					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
 				},
 				err: fmt.Errorf("Response not OK. 400 Bad Request: UpdateFirstDateSurpassed failed: 9000 not found"),
@@ -1767,10 +1767,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			_, err := ts.client.UpdateAppFirstDateSurpassed(testCtx, test.update)
 			ts.Equal(test.err, err)
 			if test.err == nil {
-				for _, appID := range test.update.PortalAppIDs {
-					application, err := ts.client.GetApplicationByID(testCtx, appID)
+				for _, appID := range test.update.ApplicationIDs {
+					application, err := ts.client.GetLoadBalancerByID(testCtx, appID)
 					ts.NoError(err)
-					ts.Equal(test.expectedDate, application.FirstDateSurpassed)
+					ts.Equal(test.expectedDate, application.Applications[0].FirstDateSurpassed)
 				}
 			}
 		}
@@ -2129,7 +2129,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			}
 		}
 	})
-
 	/* TODO: verify if this method is actually removed
 	 ts.Run("Test_CreateLoadBalancerIntegration", func() {
 		tests := []struct {
