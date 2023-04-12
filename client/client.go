@@ -12,7 +12,7 @@ import (
 
 	"github.com/gojek/heimdall/v7/httpclient"
 	"github.com/gojektech/heimdall"
-	"github.com/pokt-foundation/portal-db/types"
+	"github.com/pokt-foundation/portal-db/v2/types"
 )
 
 type (
@@ -55,16 +55,16 @@ type (
 		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`.*/
 		// This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
 		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
-		// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/pending`.*/
+		// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/pending`.*/
 		GetPendingLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error)
-		// GetLoadBalancersCountByUserID returns the number of loadbalancers owned by an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/count`.`
+		// GetLoadBalancersCountByUserID returns the number of loadbalancers owned by an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/count`.`
 		GetLoadBalancersCountByUserID(ctx context.Context, userID string) (int, error)
 		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
 		// GetPayPlanByType returns a single Pay Plan by its type - GET `<base URL>/<version>/pay_plan/{type}`
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 		// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
-		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error)
+		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.LegacyUserPermissions, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
@@ -72,8 +72,6 @@ type (
 		CreateBlockchain(ctx context.Context, blockchain types.Blockchain) (*types.Blockchain, error)
 		// CreateBlockchainRedirect creates a single Blockchain Redirect in the DB - POST `<base URL>/<version>/blockchain/redirect`
 		CreateBlockchainRedirect(ctx context.Context, redirect types.Redirect) (*types.Redirect, error)
-		// CreateApplication creates a single Application in the DB - POST `<base URL>/<version>/application`
-		CreateApplication(ctx context.Context, application types.Application) (*types.Application, error)
 		// CreateLoadBalancer creates a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer`
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
 		// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
@@ -293,7 +291,7 @@ func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string,
 	if roleNameFilter != nil {
 		filter := *roleNameFilter
 
-		if !types.ValidRoleNames[filter] {
+		if !filter.IsValid() {
 			return nil, errInvalidRoleNameFilter
 		}
 
@@ -303,7 +301,7 @@ func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string,
 	return get[[]*types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/pending`.*/
+// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/pending`.*/
 func (db *DBClient) GetPendingLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error) {
 	if userID == "" {
 		return nil, errNoUserID
@@ -314,7 +312,7 @@ func (db *DBClient) GetPendingLoadBalancersByUserID(ctx context.Context, userID 
 	return get[[]*types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetLoadBalancersCountByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/count`.*/
+// GetLoadBalancersCountByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/count`.*/
 func (db *DBClient) GetLoadBalancersCountByUserID(ctx context.Context, userID string) (int, error) {
 	if userID == "" {
 		return 0, errNoUserID
@@ -344,14 +342,14 @@ func (db *DBClient) GetPayPlanByType(ctx context.Context, payPlanType types.PayP
 }
 
 // GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
-func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
+func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.LegacyUserPermissions, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(userPath), userID, permissionPath)
 
-	return get[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	return get[*types.LegacyUserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Create Methods -- */
@@ -378,18 +376,6 @@ func (db *DBClient) CreateBlockchainRedirect(ctx context.Context, redirect types
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), redirectPath)
 
 	return post[*types.Redirect](endpoint, db.getAuthHeaderForWrite(), redirectJSON, db.httpClient)
-}
-
-// CreateApplication creates a single Application in the DB - POST `<base URL>/<version>/application`
-func (db *DBClient) CreateApplication(ctx context.Context, app types.Application) (*types.Application, error) {
-	appJSON, err := json.Marshal(app)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errInvalidAppJSON, err)
-	}
-
-	endpoint := db.versionedBasePath(applicationPath)
-
-	return post[*types.Application](endpoint, db.getAuthHeaderForWrite(), appJSON, db.httpClient)
 }
 
 // CreateLoadBalancer creates a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer`
@@ -497,20 +483,21 @@ func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancer
 	if update.UserID == "" {
 		return nil, errNoUserID
 	}
-	if update.RoleName == types.RoleName("") || !types.ValidRoleNames[update.RoleName] {
+	if update.RoleName == types.RoleName("") || !update.RoleName.IsValid() {
 		return nil, errInvalidRoleName
 	}
-	if update.RoleName == types.RoleOwner && update.UpdaterEmail == "" {
+	if update.RoleName == types.RoleOwner && update.Email == "" {
 		return nil, errOwnerRequiresUpdateEmail
 	}
 
 	updateStruct := types.UpdateUserAccess{
-		Email:    update.Email,
+		UserID:   update.UserID,
 		RoleName: update.RoleName,
+		Email:    update.Email,
 	}
-	if update.RoleName == types.RoleOwner {
+	/* 	if update.RoleName == types.RoleOwner {
 		updateStruct.UpdaterEmail = update.UpdaterEmail
-	}
+	} */
 
 	loadBalancerUserUpdateJSON, err := json.Marshal(updateStruct)
 	if err != nil {

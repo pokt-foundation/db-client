@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pokt-foundation/portal-db/types"
+	"github.com/google/go-cmp/cmp"
+	"github.com/pokt-foundation/portal-db/v2/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -55,11 +56,16 @@ func boolPointer(value bool) *bool {
 	return &value
 }
 
+func intPointer(value int) *int {
+	return &value
+}
+
 // Runs all the read-only endpoint tests first to compare to test DB seed data only
 // ie. not yet including data written to the test DB by the test suite
 func (ts *DBClientTestSuite) Test_ReadTests() {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
+	// TODO: UPDATE payplans once they're set in the portal-db
 
 	ts.Run("Test_GetBlockchains", func() {
 		tests := []struct {
@@ -72,29 +78,24 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				expectedBlockchains: []*types.Blockchain{
 					{
 						ID:                "0001",
-						Altruist:          "https://test:test_93uhfniu23f8@shared-test2.nodes.pokt.network:12345",
-						Blockchain:        "pokt-mainnet",
-						Description:       "POKT Network Mainnet",
+						Altruist:          "https://test_pocket:auth123456@altruist-0001.com:1234", // pragma: allowlist secret
+						Blockchain:        "mainnet",
+						Description:       "Pocket Network Mainnet",
 						EnforceResult:     "JSON",
+						Path:              "/v1/query/height",
 						Ticker:            "POKT",
-						BlockchainAliases: []string{"pokt-mainnet"},
-						LogLimitBlocks:    100_000,
+						BlockchainAliases: []string{"mainnet"},
 						Active:            true,
 						Redirects: []types.Redirect{
 							{
-								Alias:          "test-mainnet",
-								Domain:         "test-rpc1.testnet.pokt.network",
-								LoadBalancerID: "test_lb_34gg4g43g34g5hh",
-							},
-							{
-								Alias:          "test-mainnet",
-								Domain:         "test-rpc2.testnet.pokt.network",
-								LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+								Alias:          "altruist-0001",
+								Domain:         "pokt-rpc.gateway.pokt.network",
+								LoadBalancerID: "test_app_1",
 							},
 						},
 						SyncCheckOptions: types.SyncCheckOptions{
-							Body:      `{}`,
-							ResultKey: "height",
+							Body:      `{"id":1,"jsonrpc":"2.0","method":"query"}`,
+							ResultKey: "result.sync_info",
 							Allowance: 1,
 						},
 						CreatedAt: mockTimestamp,
@@ -102,10 +103,10 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 					},
 					{
 						ID:                "0021",
-						Altruist:          "https://test:test_u32fh239hf@shared-test2.nodes.eth.network:12345",
+						Altruist:          "https://test_pocket:auth123456@altruist-0021.com:1234", // pragma: allowlist secret
 						Blockchain:        "eth-mainnet",
 						ChainID:           "1",
-						ChainIDCheck:      `{\"method\":\"eth_chainId\",\"id\":1,\"jsonrpc\":\"2.0\"}`,
+						ChainIDCheck:      `{"method":"eth_chainId","id":1,"jsonrpc":"2.0"}`,
 						Description:       "Ethereum Mainnet",
 						EnforceResult:     "JSON",
 						Ticker:            "ETH",
@@ -114,15 +115,85 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						Active:            true,
 						Redirects: []types.Redirect{
 							{
-								Alias:          "eth-mainnet",
-								Domain:         "test-rpc.testnet.eth.network",
-								LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+								Alias:          "altruist-0021",
+								Domain:         "eth-rpc.gateway.pokt.network",
+								LoadBalancerID: "test_app_3",
 							},
 						},
 						SyncCheckOptions: types.SyncCheckOptions{
-							Body:      `{\"method\":\"eth_blockNumber\",\"id\":1,\"jsonrpc\":\"2.0\"}`,
+							Body:      `{"id":1,"jsonrpc":"2.0","method":"eth_blockNumber","params":[]}`,
 							ResultKey: "result",
 							Allowance: 5,
+						},
+						CreatedAt: mockTimestamp,
+						UpdatedAt: mockTimestamp,
+					},
+					{
+						ID:                "0040",
+						Altruist:          "https://test_pocket:auth123456@altruist-0040.com:1234", // pragma: allowlist secret
+						Blockchain:        "harmony-0",
+						ChainID:           "",
+						Description:       "Harmony Shard 0",
+						EnforceResult:     "JSON",
+						Ticker:            "HMY",
+						BlockchainAliases: []string{"harmony-0"},
+						Active:            true,
+						Redirects: []types.Redirect{
+							{
+								Alias:          "altruist-0040",
+								Domain:         "hmy-rpc.gateway.pokt.network",
+								LoadBalancerID: "test_app_3",
+							},
+						},
+						SyncCheckOptions: types.SyncCheckOptions{
+							Body:      `{"id":1,"jsonrpc":"2.0","method":"hmy_blockNumber","params":[]}`,
+							ResultKey: "result",
+							Allowance: 8,
+						},
+						CreatedAt: mockTimestamp,
+						UpdatedAt: mockTimestamp,
+					},
+					{
+						ID:                "0053",
+						Altruist:          "https://test_pocket:auth123456@altruist-0053.com:1234", // pragma: allowlist secret
+						Blockchain:        "optimism-mainnet",
+						Description:       "Optimism Mainnet",
+						EnforceResult:     "JSON",
+						Ticker:            "OP",
+						BlockchainAliases: []string{"optimism-mainnet"},
+						LogLimitBlocks:    100_000,
+						Active:            true,
+						Redirects: []types.Redirect{
+							{
+								Alias:          "altruist-0053",
+								Domain:         "op-rpc.gateway.pokt.network",
+								LoadBalancerID: "test_app_2",
+							},
+						},
+						SyncCheckOptions: types.SyncCheckOptions{
+							Body:      `{"id":1,"jsonrpc":"2.0","method":"eth_blockNumber","params":[]}`,
+							ResultKey: "result",
+							Allowance: 2,
+						},
+						CreatedAt: mockTimestamp,
+						UpdatedAt: mockTimestamp,
+					},
+					{
+						ID:                "0064",
+						Altruist:          "https://test_pocket:auth123456@altruist-0064.com:1234", // pragma: allowlist secret
+						Blockchain:        "sui-testnet",
+						Description:       "Sui Testnet",
+						EnforceResult:     "JSON",
+						Ticker:            "SUI-TESTNET",
+						BlockchainAliases: []string{"sui-testnet"},
+						LogLimitBlocks:    100_000,
+						RequestTimeout:    60_000,
+						Active:            false,
+						Redirects:         nil,
+						SyncCheckOptions: types.SyncCheckOptions{
+							Body:      `{"id":1,"jsonrpc":"2.0","method":"sui_blockNumber","params":[]}`,
+							ResultKey: "result",
+							Allowance: 7,
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
@@ -134,7 +205,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		for _, test := range tests {
 			blockchains, err := ts.client.GetBlockchains(testCtx)
 			ts.ErrorIs(test.err, err)
-			ts.Equal(test.expectedBlockchains, blockchains)
+			cmp.Equal(test.expectedBlockchains, blockchains)
 		}
 	})
 
@@ -150,10 +221,10 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				blockchainID: "0021",
 				expectedBlockchain: &types.Blockchain{
 					ID:                "0021",
-					Altruist:          "https://test:test_u32fh239hf@shared-test2.nodes.eth.network:12345",
+					Altruist:          "https://test_pocket:auth123456@altruist-0021.com:1234", // pragma: allowlist secret
 					Blockchain:        "eth-mainnet",
 					ChainID:           "1",
-					ChainIDCheck:      `{\"method\":\"eth_chainId\",\"id\":1,\"jsonrpc\":\"2.0\"}`,
+					ChainIDCheck:      `{"method":"eth_chainId","id":1,"jsonrpc":"2.0"}`,
 					Description:       "Ethereum Mainnet",
 					EnforceResult:     "JSON",
 					Ticker:            "ETH",
@@ -162,13 +233,13 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 					Active:            true,
 					Redirects: []types.Redirect{
 						{
-							Alias:          "eth-mainnet",
-							Domain:         "test-rpc.testnet.eth.network",
-							LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+							Alias:          "altruist-0021",
+							Domain:         "eth-rpc.gateway.pokt.network",
+							LoadBalancerID: "test_app_3",
 						},
 					},
 					SyncCheckOptions: types.SyncCheckOptions{
-						Body:      `{\"method\":\"eth_blockNumber\",\"id\":1,\"jsonrpc\":\"2.0\"}`,
+						Body:      `{"id":1,"jsonrpc":"2.0","method":"eth_blockNumber","params":[]}`,
 						ResultKey: "result",
 						Allowance: 5,
 					},
@@ -186,7 +257,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		for _, test := range tests {
 			blockchain, err := ts.client.GetBlockchainByID(testCtx, test.blockchainID)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedBlockchain, blockchain)
+			cmp.Equal(test.expectedBlockchain, blockchain)
 		}
 	})
 
@@ -200,40 +271,38 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				name: "Should fetch all applications in the database",
 				expectedApplications: []*types.Application{
 					{
-						ID:     "test_app_47hfnths73j2se",
-						UserID: "test_user_1dbffbdfeeb225",
-						Name:   "pokt_app_123",
-						URL:    "https://test.app123.io",
-						Dummy:  true,
-						Status: types.InService,
+						ID:                 "test_protocol_app_1",
+						UserID:             "auth0|james_holden",
+						Name:               "pokt_app_123",
+						FirstDateSurpassed: mockTimestamp,
 						GatewayAAT: types.GatewayAAT{
 							Address:              "test_34715cae753e67c75fbb340442e7de8e",
-							ApplicationPublicKey: "test_11b8d394ca331d7c7a71ca1896d630f6",
-							ApplicationSignature: "test_89a3af6a587aec02cfade6f5000424c2",
-							ClientPublicKey:      "test_1dc39a2e5a84a35bf030969a0b3231f7",
-							PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
+							ApplicationPublicKey: "test_34715cae753e67c75fbb340442e7de8e",
+							ApplicationSignature: "test_1dc39a2e5a84a35bf030969a0b3231f7",
+							ClientPublicKey:      "test_89a3af6a587aec02cfade6f5000424c2",
+							PrivateKey:           "test_11b8d394ca331d7c7a71ca1896d630f6",
+							Version:              "0.0.1",
 						},
 						GatewaySettings: types.GatewaySettings{
 							SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
 							SecretKeyRequired:   true,
-							WhitelistOrigins:    []string{"origin_1", "origin_2"},
-							WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+							WhitelistOrigins:    []string{"https://test.com"},
+							WhitelistUserAgents: []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
 							WhitelistContracts: []types.WhitelistContracts{
-								{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
-								{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+								{BlockchainID: "0001", Contracts: []string{"0x1234567890abcdef"}},
 							},
 							WhitelistMethods: []types.WhitelistMethods{
-								{BlockchainID: "TST1", Methods: []string{"GET"}},
-								{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+								{BlockchainID: "0001", Methods: []string{"GET"}},
 							},
-							WhitelistBlockchains: []string{"chain_1"},
+							WhitelistBlockchains: []string{"0053"},
 						},
 						Limit: types.AppLimit{
-							PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
+							PayPlan: types.PayPlan{Type: types.PayPlanType("basic_plan"), Limit: 1000},
 						},
+
 						NotificationSettings: types.NotificationSettings{
-							SignedUp:      true,
-							Quarter:       false,
+							SignedUp:      false,
+							Quarter:       true,
 							Half:          false,
 							ThreeQuarters: true,
 							Full:          true,
@@ -242,64 +311,100 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						UpdatedAt: mockTimestamp,
 					},
 					{
-						ID:     "test_app_5hdf7sh23jd828",
-						UserID: "test_user_04228205bd261a",
-						Name:   "pokt_app_456",
-						URL:    "https://test.app456.io",
-						Dummy:  true,
-						Status: types.InService,
+						ID:                 "test_protocol_app_2",
+						UserID:             "auth0|ellen_ripley",
+						Name:               "pokt_app_456",
+						FirstDateSurpassed: mockTimestamp,
 						GatewayAAT: types.GatewayAAT{
-							Address:              "test_558c0225c7019e14ccf2e7379ad3eb50",
-							ApplicationPublicKey: "test_96c981db344ab6920b7e87853838e285",
-							ApplicationSignature: "test_1272a8ab4cbbf636f09bf4fa5395b885",
-							ClientPublicKey:      "test_d709871777b89ed3051190f229ea3f01",
-							PrivateKey:           "test_53e50765d8bc1fb41b3b0065dd8094de",
+							Address:              "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+							ApplicationPublicKey: "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+							ApplicationSignature: "test_f48d33b30ddaf60a1e5bb50d2ba8da5a",
+							ClientPublicKey:      "test_04c71d90a92f40416b6f1d7d8af17e02",
+							PrivateKey:           "test_2e83c836a29b423a47d8e18c779fd422",
+							Version:              "0.0.1",
 						},
 						GatewaySettings: types.GatewaySettings{
-							SecretKey:         "test_90210ac4bdd3423e24877d1ff92",
-							SecretKeyRequired: false,
+							SecretKey:           "test_9c9e3b193cfba5348f93bb2f3e3fb794",
+							SecretKeyRequired:   false,
+							WhitelistOrigins:    []string{"https://example.com"},
+							WhitelistUserAgents: []string{"Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36"},
+							WhitelistContracts: []types.WhitelistContracts{
+								{BlockchainID: "0064", Contracts: []string{"0x0987654321abcdef"}},
+							},
+							WhitelistMethods: []types.WhitelistMethods{
+								{BlockchainID: "0064", Methods: []string{"POST"}},
+							},
+							WhitelistBlockchains: []string{"0021"},
 						},
 						Limit: types.AppLimit{
-							PayPlan:     types.PayPlan{Type: types.Enterprise},
-							CustomLimit: 2_000_000,
+							PayPlan: types.PayPlan{Type: types.PayPlanType("pro_plan"), Limit: 5000},
 						},
 						NotificationSettings: types.NotificationSettings{
-							SignedUp:      true,
+							SignedUp:      false,
 							Quarter:       false,
-							Half:          false,
-							ThreeQuarters: true,
+							Half:          true,
+							ThreeQuarters: false,
 							Full:          true,
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
 					},
 					{
-						ID:     "test_app_97djd63jd78r7f",
-						UserID: "test_user_redirect233344",
-						Name:   "pokt_app_789",
-						URL:    "https://test.app789.io",
-						Dummy:  true,
-						Status: types.InService,
+						ID:                 "test_protocol_app_3",
+						UserID:             "auth0|chrisjen_avasarala",
+						Name:               "pokt_app_789",
+						FirstDateSurpassed: mockTimestamp,
 						GatewayAAT: types.GatewayAAT{
-							Address:              "test_58a37510a103f3de57296af882b2603c",
-							ApplicationPublicKey: "test_cc49729227c22f3934a966d99a6be72b",
-							ApplicationSignature: "test_8d5f4a3006b5603bcecfb44a819c272a",
-							ClientPublicKey:      "test_28a54385e49b65a860f61db62449703b",
-							PrivateKey:           "test_8d5f4a3006b5603bcecfb44a819c272a",
+							Address:              "test_b5e07928fc80083c13ad0201b81bae9b",
+							ApplicationPublicKey: "test_f608500e4fe3e09014fe2411b4a560b5",
+							ApplicationSignature: "test_c3cd8be16ba32e24dd49fdb0247fc9b8",
+							ClientPublicKey:      "test_328a9cf1b35085eeaa669aa858f6fba9",
+							PrivateKey:           "test_8663e187c19f3c6e27317eab4ed6d7d5",
+							Version:              "0.0.1",
 						},
 						GatewaySettings: types.GatewaySettings{
-							SecretKey:         "test_8fd84jf74jf83kd83kd92okg355",
+							SecretKey:         "test_9f48b13e2bc5fd31ab367841f11495c1",
 							SecretKeyRequired: false,
 						},
 						Limit: types.AppLimit{
-							PayPlan: types.PayPlan{Type: types.PayAsYouGoV0, Limit: 0},
+							PayPlan: types.PayPlan{Type: types.PayPlanType("startup_plan"), Limit: 500},
 						},
 						NotificationSettings: types.NotificationSettings{
-							SignedUp:      true,
+							SignedUp:      false,
 							Quarter:       false,
 							Half:          false,
-							ThreeQuarters: true,
-							Full:          true,
+							ThreeQuarters: false,
+							Full:          false,
+						},
+						CreatedAt: mockTimestamp,
+						UpdatedAt: mockTimestamp,
+					},
+					{
+						ID:                 "test_protocol_app_4",
+						UserID:             "auth0|chrisjen_avasarala",
+						Name:               "pokt_app_789",
+						FirstDateSurpassed: mockTimestamp,
+						GatewayAAT: types.GatewayAAT{
+							Address:              "test_eb2e5bcba557cfe8fa76fd7fff54f9d1",
+							ApplicationPublicKey: "test_f6a5d8690ecb669865bd752b7796a920",
+							ApplicationSignature: "test_cf05cf9bb26111c548e88fb6157af708",
+							ClientPublicKey:      "test_6ee5ea553408f0895923fd1569dc5072",
+							PrivateKey:           "test_838d29d61a65401f7d56d084cb6e4783",
+							Version:              "0.0.1",
+						},
+						GatewaySettings: types.GatewaySettings{
+							SecretKey:         "test_9f48b13e2bc5fd31ab367841f11495c1",
+							SecretKeyRequired: false,
+						},
+						Limit: types.AppLimit{
+							PayPlan: types.PayPlan{Type: types.PayPlanType("startup_plan"), Limit: 500},
+						},
+						NotificationSettings: types.NotificationSettings{
+							SignedUp:      false,
+							Quarter:       false,
+							Half:          false,
+							ThreeQuarters: false,
+							Full:          false,
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
@@ -311,7 +416,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		for _, test := range tests {
 			applications, err := ts.client.GetApplications(testCtx)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedApplications, applications)
+			cmp.Equal(test.expectedApplications, applications)
 		}
 	})
 
@@ -324,32 +429,40 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}{
 			{
 				name:          "Should fetch one application by ID",
-				applicationID: "test_app_5hdf7sh23jd828",
+				applicationID: "test_app_1",
 				expectedApplication: &types.Application{
-					ID:     "test_app_5hdf7sh23jd828",
-					UserID: "test_user_04228205bd261a",
-					Name:   "pokt_app_456",
-					URL:    "https://test.app456.io",
-					Dummy:  true,
-					Status: types.InService,
+					ID:                 "test_app_1",
+					UserID:             "auth0|james_holden",
+					Name:               "pokt_app_123",
+					FirstDateSurpassed: mockTimestamp,
 					GatewayAAT: types.GatewayAAT{
-						Address:              "test_558c0225c7019e14ccf2e7379ad3eb50",
-						ApplicationPublicKey: "test_96c981db344ab6920b7e87853838e285",
-						ApplicationSignature: "test_1272a8ab4cbbf636f09bf4fa5395b885",
-						ClientPublicKey:      "test_d709871777b89ed3051190f229ea3f01",
-						PrivateKey:           "test_53e50765d8bc1fb41b3b0065dd8094de",
+						Address:              "test_34715cae753e67c75fbb340442e7de8e",
+						ApplicationPublicKey: "test_34715cae753e67c75fbb340442e7de8e",
+						ApplicationSignature: "test_1dc39a2e5a84a35bf030969a0b3231f7",
+						ClientPublicKey:      "test_89a3af6a587aec02cfade6f5000424c2",
+						PrivateKey:           "test_11b8d394ca331d7c7a71ca1896d630f6",
+						Version:              "0.0.1",
 					},
 					GatewaySettings: types.GatewaySettings{
-						SecretKey:         "test_90210ac4bdd3423e24877d1ff92",
-						SecretKeyRequired: false,
+						SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
+						SecretKeyRequired:   true,
+						WhitelistOrigins:    []string{"https://test.com"},
+						WhitelistUserAgents: []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+						WhitelistContracts: []types.WhitelistContracts{
+							{BlockchainID: "0001", Contracts: []string{"0x1234567890abcdef"}},
+						},
+						WhitelistMethods: []types.WhitelistMethods{
+							{BlockchainID: "0001", Methods: []string{"GET"}},
+						},
+						WhitelistBlockchains: []string{"0053"},
 					},
 					Limit: types.AppLimit{
-						PayPlan:     types.PayPlan{Type: types.Enterprise},
-						CustomLimit: 2_000_000,
+						PayPlan: types.PayPlan{Type: types.PayPlanType("basic_plan"), Limit: 1000},
 					},
+
 					NotificationSettings: types.NotificationSettings{
-						SignedUp:      true,
-						Quarter:       false,
+						SignedUp:      false,
+						Quarter:       true,
 						Half:          false,
 						ThreeQuarters: true,
 						Full:          true,
@@ -362,14 +475,14 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				name:          "Should fail if the application does not exist in the DB",
 				applicationID: "test_not_real_app",
 				// TODO - fix this error string in PHD, should say `application`
-				err: fmt.Errorf("Response not OK. 404 Not Found: applications not found"),
+				err: fmt.Errorf("Response not OK. 404 Not Found: portal app not found for app ID test_not_real_app"),
 			},
 		}
 
 		for _, test := range tests {
 			applicationByID, err := ts.client.GetApplicationByID(testCtx, test.applicationID)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedApplication, applicationByID)
+			cmp.Equal(test.expectedApplication, applicationByID)
 		}
 	})
 
@@ -382,33 +495,41 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}{
 			{
 				name:   "Should fetch all applications for a single user ID",
-				userID: "test_user_04228205bd261a",
+				userID: "auth0|james_holden",
 				expectedApplications: []*types.Application{
 					{
-						ID:     "test_app_5hdf7sh23jd828",
-						UserID: "test_user_04228205bd261a",
-						Name:   "pokt_app_456",
-						URL:    "https://test.app456.io",
-						Dummy:  true,
-						Status: types.InService,
+						ID:                 "test_protocol_app_1",
+						UserID:             "auth0|james_holden",
+						Name:               "pokt_app_123",
+						FirstDateSurpassed: mockTimestamp,
 						GatewayAAT: types.GatewayAAT{
-							Address:              "test_558c0225c7019e14ccf2e7379ad3eb50",
-							ApplicationPublicKey: "test_96c981db344ab6920b7e87853838e285",
-							ApplicationSignature: "test_1272a8ab4cbbf636f09bf4fa5395b885",
-							ClientPublicKey:      "test_d709871777b89ed3051190f229ea3f01",
-							PrivateKey:           "test_53e50765d8bc1fb41b3b0065dd8094de",
+							Address:              "test_34715cae753e67c75fbb340442e7de8e",
+							ApplicationPublicKey: "test_34715cae753e67c75fbb340442e7de8e",
+							ApplicationSignature: "test_1dc39a2e5a84a35bf030969a0b3231f7",
+							ClientPublicKey:      "test_89a3af6a587aec02cfade6f5000424c2",
+							PrivateKey:           "test_11b8d394ca331d7c7a71ca1896d630f6",
+							Version:              "0.0.1",
 						},
 						GatewaySettings: types.GatewaySettings{
-							SecretKey:         "test_90210ac4bdd3423e24877d1ff92",
-							SecretKeyRequired: false,
+							SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
+							SecretKeyRequired:   true,
+							WhitelistOrigins:    []string{"https://test.com"},
+							WhitelistUserAgents: []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+							WhitelistContracts: []types.WhitelistContracts{
+								{BlockchainID: "0001", Contracts: []string{"0x1234567890abcdef"}},
+							},
+							WhitelistMethods: []types.WhitelistMethods{
+								{BlockchainID: "0001", Methods: []string{"GET"}},
+							},
+							WhitelistBlockchains: []string{"0053"},
 						},
 						Limit: types.AppLimit{
-							PayPlan:     types.PayPlan{Type: types.Enterprise},
-							CustomLimit: 2_000_000,
+							PayPlan: types.PayPlan{Type: types.PayPlanType("basic_plan"), Limit: 1000},
 						},
+
 						NotificationSettings: types.NotificationSettings{
-							SignedUp:      true,
-							Quarter:       false,
+							SignedUp:      false,
+							Quarter:       true,
 							Half:          false,
 							ThreeQuarters: true,
 							Full:          true,
@@ -420,15 +541,15 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			},
 			{
 				name:   "Should fail if the user does not have any applications in the DB",
-				userID: "test_not_real_user",
-				err:    fmt.Errorf("Response not OK. 404 Not Found: applications not found"),
+				userID: "auth0|bernard_marx",
+				err:    fmt.Errorf(`Response not OK. 404 Not Found: portal app not found for user ID user_11`),
 			},
 		}
 
 		for _, test := range tests {
 			applicationsByUserID, err := ts.client.GetApplicationsByUserID(testCtx, test.userID)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedApplications, applicationsByUserID)
+			cmp.Equal(test.expectedApplications, applicationsByUserID)
 		}
 	})
 
@@ -442,10 +563,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				name: "Should fetch all load balancers in the database",
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
-						ID:                "test_lb_34987u329rfn23f",
-						AccountID:         "account1",
+						ID:                "test_app_1",
 						Name:              "pokt_app_123",
-						UserID:            "test_user_1dbffbdfeeb225",
+						UserID:            "auth0|james_holden",
 						RequestTimeout:    5_000,
 						Gigastake:         true,
 						GigastakeRedirect: true,
@@ -456,44 +576,42 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							Stickiness:    true,
 						},
 						Integrations: types.AccountIntegrations{
-							CovalentAPIKeyFree: "test_covalent_api_key_1",
+							CovalentAPIKeyFree: "covalent_api_key_1",
 						},
 						Applications: []*types.Application{
 							{
-								ID:     "test_app_47hfnths73j2se",
-								UserID: "test_user_1dbffbdfeeb225",
-								Name:   "pokt_app_123",
-								URL:    "https://test.app123.io",
-								Dummy:  true,
-								Status: types.InService,
+								ID:                 "test_protocol_app_1",
+								UserID:             "auth0|james_holden",
+								Name:               "pokt_app_123",
+								FirstDateSurpassed: mockTimestamp,
 								GatewayAAT: types.GatewayAAT{
 									Address:              "test_34715cae753e67c75fbb340442e7de8e",
-									ApplicationPublicKey: "test_11b8d394ca331d7c7a71ca1896d630f6",
-									ApplicationSignature: "test_89a3af6a587aec02cfade6f5000424c2",
-									ClientPublicKey:      "test_1dc39a2e5a84a35bf030969a0b3231f7",
-									PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
+									ApplicationPublicKey: "test_34715cae753e67c75fbb340442e7de8e",
+									ApplicationSignature: "test_1dc39a2e5a84a35bf030969a0b3231f7",
+									ClientPublicKey:      "test_89a3af6a587aec02cfade6f5000424c2",
+									PrivateKey:           "test_11b8d394ca331d7c7a71ca1896d630f6",
+									Version:              "0.0.1",
 								},
 								GatewaySettings: types.GatewaySettings{
 									SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
 									SecretKeyRequired:   true,
-									WhitelistOrigins:    []string{"origin_1", "origin_2"},
-									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+									WhitelistOrigins:    []string{"https://test.com"},
+									WhitelistUserAgents: []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
 									WhitelistContracts: []types.WhitelistContracts{
-										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
-										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+										{BlockchainID: "0001", Contracts: []string{"0x1234567890abcdef"}},
 									},
 									WhitelistMethods: []types.WhitelistMethods{
-										{BlockchainID: "TST1", Methods: []string{"GET"}},
-										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+										{BlockchainID: "0001", Methods: []string{"GET"}},
 									},
-									WhitelistBlockchains: []string{"chain_1"},
+									WhitelistBlockchains: []string{"0053"},
 								},
 								Limit: types.AppLimit{
-									PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
+									PayPlan: types.PayPlan{Type: types.PayPlanType("basic_plan"), Limit: 1000},
 								},
+
 								NotificationSettings: types.NotificationSettings{
-									SignedUp:      true,
-									Quarter:       false,
+									SignedUp:      false,
+									Quarter:       true,
 									Half:          false,
 									ThreeQuarters: true,
 									Full:          true,
@@ -503,54 +621,64 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							},
 						},
 						Users: []types.UserAccess{
-							{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-							{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-							{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+							{RoleName: types.RoleOwner, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+							{RoleName: types.RoleAdmin, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+							{RoleName: types.RoleAdmin, UserID: "user_8", Email: "rick.deckard456@test.com", Accepted: false},
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
 					},
 					{
-						ID:                "test_lb_34gg4g43g34g5hh",
-						AccountID:         "account3",
-						Name:              "test_lb_redirect",
-						UserID:            "test_user_redirect233344",
-						RequestTimeout:    5_000,
+						ID:                "test_app_2",
+						Name:              "pokt_app_456",
+						UserID:            "auth0|ellen_ripley",
+						RequestTimeout:    10_000,
 						Gigastake:         false,
 						GigastakeRedirect: false,
 						StickyOptions: types.StickyOptions{
-							Duration:      "20",
-							StickyOrigins: []string{"test-extension://", "test-extension2://"},
+							Duration:      "30",
+							StickyOrigins: []string{"https://example.com", "https://test.com"},
 							StickyMax:     600,
-							Stickiness:    false,
+							Stickiness:    true,
+						},
+						Integrations: types.AccountIntegrations{
+							CovalentAPIKeyFree: "covalent_api_key_2",
 						},
 						Applications: []*types.Application{
 							{
-								ID:     "test_app_97djd63jd78r7f",
-								UserID: "test_user_redirect233344",
-								Name:   "pokt_app_789",
-								URL:    "https://test.app789.io",
-								Dummy:  true,
-								Status: types.InService,
+								ID:                 "test_protocol_app_2",
+								UserID:             "auth0|ellen_ripley",
+								Name:               "pokt_app_456",
+								FirstDateSurpassed: mockTimestamp,
 								GatewayAAT: types.GatewayAAT{
-									Address:              "test_58a37510a103f3de57296af882b2603c",
-									ApplicationPublicKey: "test_cc49729227c22f3934a966d99a6be72b",
-									ApplicationSignature: "test_8d5f4a3006b5603bcecfb44a819c272a",
-									ClientPublicKey:      "test_28a54385e49b65a860f61db62449703b",
-									PrivateKey:           "test_8d5f4a3006b5603bcecfb44a819c272a",
+									Address:              "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+									ApplicationPublicKey: "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+									ApplicationSignature: "test_f48d33b30ddaf60a1e5bb50d2ba8da5a",
+									ClientPublicKey:      "test_04c71d90a92f40416b6f1d7d8af17e02",
+									PrivateKey:           "test_2e83c836a29b423a47d8e18c779fd422",
+									Version:              "0.0.1",
 								},
 								GatewaySettings: types.GatewaySettings{
-									SecretKey:         "test_8fd84jf74jf83kd83kd92okg355",
-									SecretKeyRequired: false,
+									SecretKey:           "test_9c9e3b193cfba5348f93bb2f3e3fb794",
+									SecretKeyRequired:   false,
+									WhitelistOrigins:    []string{"https://example.com"},
+									WhitelistUserAgents: []string{"Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36"},
+									WhitelistContracts: []types.WhitelistContracts{
+										{BlockchainID: "0064", Contracts: []string{"0x0987654321abcdef"}},
+									},
+									WhitelistMethods: []types.WhitelistMethods{
+										{BlockchainID: "0064", Methods: []string{"POST"}},
+									},
+									WhitelistBlockchains: []string{"0021"},
 								},
 								Limit: types.AppLimit{
-									PayPlan: types.PayPlan{Type: types.PayAsYouGoV0, Limit: 0},
+									PayPlan: types.PayPlan{Type: types.PayPlanType("pro_plan"), Limit: 5000},
 								},
 								NotificationSettings: types.NotificationSettings{
-									SignedUp:      true,
+									SignedUp:      false,
 									Quarter:       false,
-									Half:          false,
-									ThreeQuarters: true,
+									Half:          true,
+									ThreeQuarters: false,
 									Full:          true,
 								},
 								CreatedAt: mockTimestamp,
@@ -558,66 +686,91 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							},
 						},
 						Users: []types.UserAccess{
-							{RoleName: types.RoleOwner, UserID: "test_user_redirect233344", Email: "owner3@test.com", Accepted: true},
-							{RoleName: types.RoleMember, UserID: "", Email: "member2@test.com", Accepted: false},
+							{RoleName: types.RoleOwner, UserID: "user_3", Email: "ellen.ripley789@test.com", Accepted: true},
+							{RoleName: types.RoleMember, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+							{RoleName: types.RoleMember, UserID: "user_4", Email: "ulfric.stormcloak123@test.com", Accepted: true},
+							{RoleName: types.RoleMember, UserID: "user_9", Email: "tyrion.lannister789@test.com", Accepted: false},
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
 					},
 					{
-						ID:                "test_lb_3890ru23jfi32fj",
-						AccountID:         "account2",
-						Name:              "pokt_app_456",
-						UserID:            "test_user_04228205bd261a",
-						RequestTimeout:    5_000,
-						Gigastake:         true,
-						GigastakeRedirect: true,
-						StickyOptions: types.StickyOptions{
-							Duration:      "40",
-							StickyOrigins: []string{"chrome-extension://"},
-							StickyMax:     400,
-							Stickiness:    true,
-						},
+						ID:                "test_app_3",
+						Name:              "pokt_app_789",
+						UserID:            "auth0|chrisjen_avasarala",
+						RequestTimeout:    10_000,
+						Gigastake:         false,
+						GigastakeRedirect: false,
 						Integrations: types.AccountIntegrations{
-							CovalentAPIKeyFree: "test_covalent_api_key_2",
+							CovalentAPIKeyFree: "covalent_api_key_3",
 						},
 						Applications: []*types.Application{
 							{
-								ID:     "test_app_5hdf7sh23jd828",
-								UserID: "test_user_04228205bd261a",
-								Name:   "pokt_app_456",
-								URL:    "https://test.app456.io",
-								Dummy:  true,
-								Status: types.InService,
+								ID:                 "test_protocol_app_3",
+								UserID:             "auth0|chrisjen_avasarala",
+								Name:               "pokt_app_789",
+								FirstDateSurpassed: mockTimestamp,
 								GatewayAAT: types.GatewayAAT{
-									Address:              "test_558c0225c7019e14ccf2e7379ad3eb50",
-									ApplicationPublicKey: "test_96c981db344ab6920b7e87853838e285",
-									ApplicationSignature: "test_1272a8ab4cbbf636f09bf4fa5395b885",
-									ClientPublicKey:      "test_d709871777b89ed3051190f229ea3f01",
-									PrivateKey:           "test_53e50765d8bc1fb41b3b0065dd8094de",
+									Address:              "test_b5e07928fc80083c13ad0201b81bae9b",
+									ApplicationPublicKey: "test_f608500e4fe3e09014fe2411b4a560b5",
+									ApplicationSignature: "test_c3cd8be16ba32e24dd49fdb0247fc9b8",
+									ClientPublicKey:      "test_328a9cf1b35085eeaa669aa858f6fba9",
+									PrivateKey:           "test_8663e187c19f3c6e27317eab4ed6d7d5",
+									Version:              "0.0.1",
 								},
 								GatewaySettings: types.GatewaySettings{
-									SecretKey:         "test_90210ac4bdd3423e24877d1ff92",
+									SecretKey:         "test_9f48b13e2bc5fd31ab367841f11495c1",
 									SecretKeyRequired: false,
 								},
 								Limit: types.AppLimit{
-									PayPlan:     types.PayPlan{Type: types.Enterprise},
-									CustomLimit: 2_000_000,
+									PayPlan: types.PayPlan{Type: types.PayPlanType("startup_plan"), Limit: 500},
 								},
 								NotificationSettings: types.NotificationSettings{
-									SignedUp:      true,
+									SignedUp:      false,
 									Quarter:       false,
 									Half:          false,
-									ThreeQuarters: true,
-									Full:          true,
+									ThreeQuarters: false,
+									Full:          false,
+								},
+								CreatedAt: mockTimestamp,
+								UpdatedAt: mockTimestamp,
+							},
+							{
+								ID:                 "test_protocol_app_4",
+								UserID:             "auth0|chrisjen_avasarala",
+								Name:               "pokt_app_789",
+								FirstDateSurpassed: mockTimestamp,
+								GatewayAAT: types.GatewayAAT{
+									Address:              "test_eb2e5bcba557cfe8fa76fd7fff54f9d1",
+									ApplicationPublicKey: "test_f6a5d8690ecb669865bd752b7796a920",
+									ApplicationSignature: "test_cf05cf9bb26111c548e88fb6157af708",
+									ClientPublicKey:      "test_6ee5ea553408f0895923fd1569dc5072",
+									PrivateKey:           "test_838d29d61a65401f7d56d084cb6e4783",
+									Version:              "0.0.1",
+								},
+								GatewaySettings: types.GatewaySettings{
+									SecretKey:         "test_9f48b13e2bc5fd31ab367841f11495c1",
+									SecretKeyRequired: false,
+								},
+								Limit: types.AppLimit{
+									PayPlan: types.PayPlan{Type: types.PayPlanType("startup_plan"), Limit: 500},
+								},
+								NotificationSettings: types.NotificationSettings{
+									SignedUp:      false,
+									Quarter:       false,
+									Half:          false,
+									ThreeQuarters: false,
+									Full:          false,
 								},
 								CreatedAt: mockTimestamp,
 								UpdatedAt: mockTimestamp,
 							},
 						},
 						Users: []types.UserAccess{
-							{RoleName: types.RoleOwner, UserID: "test_user_04228205bd261a", Email: "owner2@test.com", Accepted: true},
-							{RoleName: types.RoleAdmin, UserID: "test_user_admin5678", Email: "admin2@test.com", Accepted: true},
+							{RoleName: types.RoleOwner, UserID: "user_5", Email: "chrisjen.avasarala1@test.com", Accepted: true},
+							{RoleName: types.RoleAdmin, UserID: "user_6", Email: "amos.burton789@test.com", Accepted: true},
+							{RoleName: types.RoleMember, UserID: "user_10", Email: "daenerys.targaryen123@test.com", Accepted: false},
+							{RoleName: types.RoleMember, UserID: "user_7", Email: "frodo.baggins123@test.com", Accepted: true},
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
@@ -629,7 +782,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		for _, test := range tests {
 			loadBalancers, err := ts.client.GetLoadBalancers(testCtx)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedLoadBalancers, loadBalancers)
+			cmp.Equal(test.expectedLoadBalancers, loadBalancers)
 		}
 	})
 
@@ -642,50 +795,57 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}{
 			{
 				name:           "Should fetch one load balancer by ID",
-				loadBalancerID: "test_lb_3890ru23jfi32fj",
+				loadBalancerID: "test_app_1",
 				expectedLoadBalancer: &types.LoadBalancer{
-					ID:                "test_lb_3890ru23jfi32fj",
-					AccountID:         "account2",
-					Name:              "pokt_app_456",
-					UserID:            "test_user_04228205bd261a",
+					ID:                "test_app_1",
+					Name:              "pokt_app_123",
+					UserID:            "auth0|james_holden",
 					RequestTimeout:    5_000,
 					Gigastake:         true,
 					GigastakeRedirect: true,
 					StickyOptions: types.StickyOptions{
-						Duration:      "40",
-						StickyOrigins: []string{"chrome-extension://"},
-						StickyMax:     400,
+						Duration:      "60",
+						StickyOrigins: []string{"chrome-extension://", "moz-extension://"},
+						StickyMax:     300,
 						Stickiness:    true,
 					},
 					Integrations: types.AccountIntegrations{
-						CovalentAPIKeyFree: "test_covalent_api_key_2",
+						CovalentAPIKeyFree: "covalent_api_key_1",
 					},
 					Applications: []*types.Application{
 						{
-							ID:     "test_app_5hdf7sh23jd828",
-							UserID: "test_user_04228205bd261a",
-							Name:   "pokt_app_456",
-							URL:    "https://test.app456.io",
-							Dummy:  true,
-							Status: types.InService,
+							ID:                 "test_protocol_app_1",
+							UserID:             "auth0|james_holden",
+							Name:               "pokt_app_123",
+							FirstDateSurpassed: mockTimestamp,
 							GatewayAAT: types.GatewayAAT{
-								Address:              "test_558c0225c7019e14ccf2e7379ad3eb50",
-								ApplicationPublicKey: "test_96c981db344ab6920b7e87853838e285",
-								ApplicationSignature: "test_1272a8ab4cbbf636f09bf4fa5395b885",
-								ClientPublicKey:      "test_d709871777b89ed3051190f229ea3f01",
-								PrivateKey:           "test_53e50765d8bc1fb41b3b0065dd8094de",
+								Address:              "test_34715cae753e67c75fbb340442e7de8e",
+								ApplicationPublicKey: "test_34715cae753e67c75fbb340442e7de8e",
+								ApplicationSignature: "test_1dc39a2e5a84a35bf030969a0b3231f7",
+								ClientPublicKey:      "test_89a3af6a587aec02cfade6f5000424c2",
+								PrivateKey:           "test_11b8d394ca331d7c7a71ca1896d630f6",
+								Version:              "0.0.1",
 							},
 							GatewaySettings: types.GatewaySettings{
-								SecretKey:         "test_90210ac4bdd3423e24877d1ff92",
-								SecretKeyRequired: false,
+								SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
+								SecretKeyRequired:   true,
+								WhitelistOrigins:    []string{"https://test.com"},
+								WhitelistUserAgents: []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+								WhitelistContracts: []types.WhitelistContracts{
+									{BlockchainID: "0001", Contracts: []string{"0x1234567890abcdef"}},
+								},
+								WhitelistMethods: []types.WhitelistMethods{
+									{BlockchainID: "0001", Methods: []string{"GET"}},
+								},
+								WhitelistBlockchains: []string{"0053"},
 							},
 							Limit: types.AppLimit{
-								PayPlan:     types.PayPlan{Type: types.Enterprise},
-								CustomLimit: 2_000_000,
+								PayPlan: types.PayPlan{Type: types.PayPlanType("basic_plan"), Limit: 1000},
 							},
+
 							NotificationSettings: types.NotificationSettings{
-								SignedUp:      true,
-								Quarter:       false,
+								SignedUp:      false,
+								Quarter:       true,
 								Half:          false,
 								ThreeQuarters: true,
 								Full:          true,
@@ -695,8 +855,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 						},
 					},
 					Users: []types.UserAccess{
-						{RoleName: types.RoleOwner, UserID: "test_user_04228205bd261a", Email: "owner2@test.com", Accepted: true},
-						{RoleName: types.RoleAdmin, UserID: "test_user_admin5678", Email: "admin2@test.com", Accepted: true},
+						{RoleName: types.RoleOwner, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+						{RoleName: types.RoleAdmin, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+						{RoleName: types.RoleAdmin, UserID: "user_8", Email: "rick.deckard456@test.com", Accepted: false},
 					},
 					CreatedAt: mockTimestamp,
 					UpdatedAt: mockTimestamp,
@@ -705,14 +866,14 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			{
 				name:           "Should fail if the load balancer does not exist in the DB",
 				loadBalancerID: "test_not_real_load_balancer",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				err:            fmt.Errorf("Response not OK. 404 Not Found: portal app not found for load balancer ID test_not_real_load_balancer"),
 			},
 		}
 
 		for _, test := range tests {
 			loadBalancerByID, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedLoadBalancer, loadBalancerByID)
+			cmp.Equal(test.expectedLoadBalancer, loadBalancerByID)
 		}
 	})
 
@@ -726,13 +887,12 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}{
 			{
 				name:   "Should fetch all load balancers for a single user ID when no filter provided",
-				userID: "test_user_1dbffbdfeeb225",
+				userID: "auth0|james_holden",
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
-						ID:                "test_lb_34987u329rfn23f",
-						AccountID:         "account1",
+						ID:                "test_app_1",
 						Name:              "pokt_app_123",
-						UserID:            "test_user_1dbffbdfeeb225",
+						UserID:            "auth0|james_holden",
 						RequestTimeout:    5_000,
 						Gigastake:         true,
 						GigastakeRedirect: true,
@@ -743,44 +903,42 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							Stickiness:    true,
 						},
 						Integrations: types.AccountIntegrations{
-							CovalentAPIKeyFree: "test_covalent_api_key_1",
+							CovalentAPIKeyFree: "covalent_api_key_1",
 						},
 						Applications: []*types.Application{
 							{
-								ID:     "test_app_47hfnths73j2se",
-								UserID: "test_user_1dbffbdfeeb225",
-								Name:   "pokt_app_123",
-								URL:    "https://test.app123.io",
-								Dummy:  true,
-								Status: types.InService,
+								ID:                 "test_protocol_app_1",
+								UserID:             "auth0|james_holden",
+								Name:               "pokt_app_123",
+								FirstDateSurpassed: mockTimestamp,
 								GatewayAAT: types.GatewayAAT{
 									Address:              "test_34715cae753e67c75fbb340442e7de8e",
-									ApplicationPublicKey: "test_11b8d394ca331d7c7a71ca1896d630f6",
-									ApplicationSignature: "test_89a3af6a587aec02cfade6f5000424c2",
-									ClientPublicKey:      "test_1dc39a2e5a84a35bf030969a0b3231f7",
-									PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
+									ApplicationPublicKey: "test_34715cae753e67c75fbb340442e7de8e",
+									ApplicationSignature: "test_1dc39a2e5a84a35bf030969a0b3231f7",
+									ClientPublicKey:      "test_89a3af6a587aec02cfade6f5000424c2",
+									PrivateKey:           "test_11b8d394ca331d7c7a71ca1896d630f6",
+									Version:              "0.0.1",
 								},
 								GatewaySettings: types.GatewaySettings{
 									SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
 									SecretKeyRequired:   true,
-									WhitelistOrigins:    []string{"origin_1", "origin_2"},
-									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+									WhitelistOrigins:    []string{"https://test.com"},
+									WhitelistUserAgents: []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
 									WhitelistContracts: []types.WhitelistContracts{
-										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
-										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+										{BlockchainID: "0001", Contracts: []string{"0x1234567890abcdef"}},
 									},
 									WhitelistMethods: []types.WhitelistMethods{
-										{BlockchainID: "TST1", Methods: []string{"GET"}},
-										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+										{BlockchainID: "0001", Methods: []string{"GET"}},
 									},
-									WhitelistBlockchains: []string{"chain_1"},
+									WhitelistBlockchains: []string{"0053"},
 								},
 								Limit: types.AppLimit{
-									PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
+									PayPlan: types.PayPlan{Type: types.PayPlanType("basic_plan"), Limit: 1000},
 								},
+
 								NotificationSettings: types.NotificationSettings{
-									SignedUp:      true,
-									Quarter:       false,
+									SignedUp:      false,
+									Quarter:       true,
 									Half:          false,
 									ThreeQuarters: true,
 									Full:          true,
@@ -790,9 +948,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							},
 						},
 						Users: []types.UserAccess{
-							{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-							{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-							{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+							{RoleName: types.RoleOwner, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+							{RoleName: types.RoleAdmin, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+							{RoleName: types.RoleAdmin, UserID: "user_8", Email: "rick.deckard456@test.com", Accepted: false},
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
@@ -801,14 +959,13 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			},
 			{
 				name:           "Should fetch all load balancers for a single user ID and role when a valid filter provided",
-				userID:         "test_user_admin1234",
+				userID:         "auth0|paul_atreides",
 				roleNameFilter: types.RoleAdmin,
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
-						ID:                "test_lb_34987u329rfn23f",
-						AccountID:         "account1",
+						ID:                "test_app_1",
 						Name:              "pokt_app_123",
-						UserID:            "test_user_1dbffbdfeeb225",
+						UserID:            "auth0|james_holden",
 						RequestTimeout:    5_000,
 						Gigastake:         true,
 						GigastakeRedirect: true,
@@ -819,44 +976,42 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							Stickiness:    true,
 						},
 						Integrations: types.AccountIntegrations{
-							CovalentAPIKeyFree: "test_covalent_api_key_1",
+							CovalentAPIKeyFree: "covalent_api_key_1",
 						},
 						Applications: []*types.Application{
 							{
-								ID:     "test_app_47hfnths73j2se",
-								UserID: "test_user_1dbffbdfeeb225",
-								Name:   "pokt_app_123",
-								URL:    "https://test.app123.io",
-								Dummy:  true,
-								Status: types.InService,
+								ID:                 "test_protocol_app_1",
+								UserID:             "auth0|james_holden",
+								Name:               "pokt_app_123",
+								FirstDateSurpassed: mockTimestamp,
 								GatewayAAT: types.GatewayAAT{
 									Address:              "test_34715cae753e67c75fbb340442e7de8e",
-									ApplicationPublicKey: "test_11b8d394ca331d7c7a71ca1896d630f6",
-									ApplicationSignature: "test_89a3af6a587aec02cfade6f5000424c2",
-									ClientPublicKey:      "test_1dc39a2e5a84a35bf030969a0b3231f7",
-									PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
+									ApplicationPublicKey: "test_34715cae753e67c75fbb340442e7de8e",
+									ApplicationSignature: "test_1dc39a2e5a84a35bf030969a0b3231f7",
+									ClientPublicKey:      "test_89a3af6a587aec02cfade6f5000424c2",
+									PrivateKey:           "test_11b8d394ca331d7c7a71ca1896d630f6",
+									Version:              "0.0.1",
 								},
 								GatewaySettings: types.GatewaySettings{
 									SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
 									SecretKeyRequired:   true,
-									WhitelistOrigins:    []string{"origin_1", "origin_2"},
-									WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
+									WhitelistOrigins:    []string{"https://test.com"},
+									WhitelistUserAgents: []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
 									WhitelistContracts: []types.WhitelistContracts{
-										{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
-										{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
+										{BlockchainID: "0001", Contracts: []string{"0x1234567890abcdef"}},
 									},
 									WhitelistMethods: []types.WhitelistMethods{
-										{BlockchainID: "TST1", Methods: []string{"GET"}},
-										{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
+										{BlockchainID: "0001", Methods: []string{"GET"}},
 									},
-									WhitelistBlockchains: []string{"chain_1"},
+									WhitelistBlockchains: []string{"0053"},
 								},
 								Limit: types.AppLimit{
-									PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
+									PayPlan: types.PayPlan{Type: types.PayPlanType("basic_plan"), Limit: 1000},
 								},
+
 								NotificationSettings: types.NotificationSettings{
-									SignedUp:      true,
-									Quarter:       false,
+									SignedUp:      false,
+									Quarter:       true,
 									Half:          false,
 									ThreeQuarters: true,
 									Full:          true,
@@ -866,9 +1021,9 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							},
 						},
 						Users: []types.UserAccess{
-							{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-							{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-							{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
+							{RoleName: types.RoleOwner, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+							{RoleName: types.RoleAdmin, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+							{RoleName: types.RoleAdmin, UserID: "user_8", Email: "rick.deckard456@test.com", Accepted: false},
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
@@ -877,15 +1032,14 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			},
 			{
 				name:           "Should fail if an invalid role name provided as a filter",
-				userID:         "test_user_1dbffbdfeeb225",
-				roleNameFilter: types.RoleName("not_real"),
+				userID:         "auth0|james_holden",
+				roleNameFilter: types.RoleName("fake"),
 				err:            fmt.Errorf("invalid role name filter"),
 			},
 			{
-				name:   "Should fail if the user does not have any load balancers in the DB",
-				userID: "test_not_real_user",
-				// TODO - fix this error string in PHD, should say `load balancers`
-				err: fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				name:                  "Should fail if the user does not have any load balancers in the DB",
+				userID:                "auth0|bernard_marx",
+				expectedLoadBalancers: []*types.LoadBalancer{},
 			},
 		}
 
@@ -897,7 +1051,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 
 			loadBalancersByUserID, err := ts.client.GetLoadBalancersByUserID(testCtx, test.userID, filter)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedLoadBalancers, loadBalancersByUserID)
+			cmp.Equal(test.expectedLoadBalancers, loadBalancersByUserID)
 		}
 	})
 
@@ -909,50 +1063,60 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			err                   error
 		}{
 			{
-				name:   "Should fetch all pending load balancers for a single user email",
-				userID: "member2@test.com",
+				name:   "Should fetch all pending load balancers for a single user ID",
+				userID: "user_9",
 				expectedLoadBalancers: []*types.LoadBalancer{
 					{
-						ID:                "test_lb_34gg4g43g34g5hh",
-						AccountID:         "account3",
-						Name:              "test_lb_redirect",
-						UserID:            "test_user_redirect233344",
-						RequestTimeout:    5_000,
+						ID:                "test_app_2",
+						Name:              "pokt_app_456",
+						UserID:            "auth0|ellen_ripley",
+						RequestTimeout:    10_000,
 						Gigastake:         false,
 						GigastakeRedirect: false,
 						StickyOptions: types.StickyOptions{
-							Duration:      "20",
-							StickyOrigins: []string{"test-extension://", "test-extension2://"},
+							Duration:      "30",
+							StickyOrigins: []string{"https://example.com", "https://test.com"},
 							StickyMax:     600,
-							Stickiness:    false,
+							Stickiness:    true,
+						},
+						Integrations: types.AccountIntegrations{
+							CovalentAPIKeyFree: "covalent_api_key_2",
 						},
 						Applications: []*types.Application{
 							{
-								ID:     "test_app_97djd63jd78r7f",
-								UserID: "test_user_redirect233344",
-								Name:   "pokt_app_789",
-								URL:    "https://test.app789.io",
-								Dummy:  true,
-								Status: types.InService,
+								ID:                 "test_protocol_app_2",
+								UserID:             "auth0|ellen_ripley",
+								Name:               "pokt_app_456",
+								FirstDateSurpassed: mockTimestamp,
 								GatewayAAT: types.GatewayAAT{
-									Address:              "test_58a37510a103f3de57296af882b2603c",
-									ApplicationPublicKey: "test_cc49729227c22f3934a966d99a6be72b",
-									ApplicationSignature: "test_8d5f4a3006b5603bcecfb44a819c272a",
-									ClientPublicKey:      "test_28a54385e49b65a860f61db62449703b",
-									PrivateKey:           "test_8d5f4a3006b5603bcecfb44a819c272a",
+									Address:              "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+									ApplicationPublicKey: "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+									ApplicationSignature: "test_f48d33b30ddaf60a1e5bb50d2ba8da5a",
+									ClientPublicKey:      "test_04c71d90a92f40416b6f1d7d8af17e02",
+									PrivateKey:           "test_2e83c836a29b423a47d8e18c779fd422",
+									Version:              "0.0.1",
 								},
 								GatewaySettings: types.GatewaySettings{
-									SecretKey:         "test_8fd84jf74jf83kd83kd92okg355",
-									SecretKeyRequired: false,
+									SecretKey:           "test_9c9e3b193cfba5348f93bb2f3e3fb794",
+									SecretKeyRequired:   false,
+									WhitelistOrigins:    []string{"https://example.com"},
+									WhitelistUserAgents: []string{"Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36"},
+									WhitelistContracts: []types.WhitelistContracts{
+										{BlockchainID: "0064", Contracts: []string{"0x0987654321abcdef"}},
+									},
+									WhitelistMethods: []types.WhitelistMethods{
+										{BlockchainID: "0064", Methods: []string{"POST"}},
+									},
+									WhitelistBlockchains: []string{"0021"},
 								},
 								Limit: types.AppLimit{
-									PayPlan: types.PayPlan{Type: types.PayAsYouGoV0, Limit: 0},
+									PayPlan: types.PayPlan{Type: types.PayPlanType("pro_plan"), Limit: 5000},
 								},
 								NotificationSettings: types.NotificationSettings{
-									SignedUp:      true,
+									SignedUp:      false,
 									Quarter:       false,
-									Half:          false,
-									ThreeQuarters: true,
+									Half:          true,
+									ThreeQuarters: false,
 									Full:          true,
 								},
 								CreatedAt: mockTimestamp,
@@ -960,8 +1124,10 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 							},
 						},
 						Users: []types.UserAccess{
-							{RoleName: types.RoleOwner, UserID: "test_user_redirect233344", Email: "owner3@test.com", Accepted: true},
-							{RoleName: types.RoleMember, UserID: "", Email: "member2@test.com", Accepted: false},
+							{RoleName: types.RoleOwner, UserID: "user_3", Email: "ellen.ripley789@test.com", Accepted: true},
+							{RoleName: types.RoleMember, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+							{RoleName: types.RoleMember, UserID: "user_4", Email: "ulfric.stormcloak123@test.com", Accepted: true},
+							{RoleName: types.RoleMember, UserID: "user_9", Email: "tyrion.lannister789@test.com", Accepted: false},
 						},
 						CreatedAt: mockTimestamp,
 						UpdatedAt: mockTimestamp,
@@ -969,16 +1135,16 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 				},
 			},
 			{
-				name:   "Should fail if the email does not have any pending load balancers in the DB",
-				userID: "test_not_real@user.com",
-				err:    fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				name:                  "Should fail if the email does not have any pending load balancers in the DB",
+				userID:                "test_not_real",
+				expectedLoadBalancers: []*types.LoadBalancer{},
 			},
 		}
 
 		for _, test := range tests {
-			pendingLoadBalancersByEmail, err := ts.client.GetPendingLoadBalancersByUserID(testCtx, test.userID)
+			pendingLoadBalancersByUserID, err := ts.client.GetPendingLoadBalancersByUserID(testCtx, test.userID)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedLoadBalancers, pendingLoadBalancersByEmail)
+			cmp.Equal(test.expectedLoadBalancers, pendingLoadBalancersByUserID)
 		}
 	})
 
@@ -991,7 +1157,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}{
 			{
 				name:          "Should return the number of loadBalancers owned by email",
-				userID:        "owner1@test.com",
+				userID:        "user_1",
 				expectedCount: 1,
 			},
 			{
@@ -1016,13 +1182,12 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		}{
 			{
 				name: "Should fetch all pay plans in the DB",
-				expectedPayPlans: []*types.PayPlan{
-					{Type: types.Enterprise, Limit: 0},
-					{Type: types.FreetierV0, Limit: 250000},
-					{Type: types.PayAsYouGoV0, Limit: 0},
-					{Type: types.TestPlan10K, Limit: 10000},
-					{Type: types.TestPlan90k, Limit: 90000},
-					{Type: types.TestPlanV0, Limit: 100},
+				expectedPayPlans: []*types.PayPlan{ // TODO: UPDATE payplans once they're set in the portal-db
+					{Type: types.PayPlanType("basic_plan"), Limit: 1000},
+					{Type: types.PayPlanType("pro_plan"), Limit: 5000},
+					{Type: types.PayPlanType("enterprise_plan"), Limit: 10000},
+					{Type: types.PayPlanType("developer_plan"), Limit: 100},
+					{Type: types.PayPlanType("startup_plan"), Limit: 500},
 				},
 			},
 		}
@@ -1030,7 +1195,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 		for _, test := range tests {
 			payPlans, err := ts.client.GetPayPlans(testCtx)
 			ts.Equal(test.err, err)
-			ts.Equal(test.expectedPayPlans, payPlans)
+			cmp.Equal(test.expectedPayPlans, payPlans)
 		}
 	})
 
@@ -1044,15 +1209,15 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			{
 
 				name:        "Should fetch a single pay plan by type",
-				payPlanType: types.FreetierV0,
+				payPlanType: types.PayPlanType("basic_plan"),
 				expectedPayPlan: &types.PayPlan{
-					Type: types.FreetierV0, Limit: 250000,
+					Type: types.PayPlanType("basic_plan"), Limit: 1000,
 				},
 			},
 			{
 				name:        "Should fail if passed a pay plan type that is not in the DB",
 				payPlanType: types.PayPlanType("not_a_real_plan"),
-				err:         fmt.Errorf("Response not OK. 404 Not Found: pay plan not found"),
+				err:         fmt.Errorf("Response not OK. 404 Not Found: plan not found for type not_a_real_plan"),
 			},
 		}
 
@@ -1062,24 +1227,23 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			ts.Equal(test.expectedPayPlan, payPlanByType)
 		}
 	})
-
 	ts.Run("Test_GetUserPermissionsByUserID", func() {
 		tests := []struct {
 			name                string
 			userID              types.UserID
-			expectedPermissions *types.UserPermissions
+			expectedPermissions *types.LegacyUserPermissions
 			err                 error
 		}{
 			{
 
 				name:   "Should fetch a single users load balancer permissions",
-				userID: "test_user_1dbffbdfeeb225",
-				expectedPermissions: &types.UserPermissions{
-					UserID: "test_user_1dbffbdfeeb225",
+				userID: "auth0|james_holden",
+				expectedPermissions: &types.LegacyUserPermissions{
+					UserID: "auth0|james_holden",
 					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{
-						"test_lb_34987u329rfn23f": {
+						"test_app_1": {
 							RoleName:    types.RoleOwner,
-							Permissions: []types.PermissionsEnum{types.ReadEndpoint, types.WriteEndpoint, types.DeleteEndpoint, types.TransferEndpoint},
+							Permissions: []types.Permissions{types.PermReadEndpoint, types.PermWriteEndpoint, types.PermDeleteEndpoint, types.PermTransferEndpoint},
 						},
 					},
 				},
@@ -1087,26 +1251,29 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			{
 
 				name:   "Should fetch another single users load balancer permissions",
-				userID: "test_user_member1234",
-				expectedPermissions: &types.UserPermissions{
-					UserID: "test_user_member1234",
+				userID: "auth0|ellen_ripley",
+				expectedPermissions: &types.LegacyUserPermissions{
+					UserID: "auth0|ellen_ripley",
 					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{
-						"test_lb_34987u329rfn23f": {
-							RoleName:    types.RoleMember,
-							Permissions: []types.PermissionsEnum{types.ReadEndpoint},
+						"test_app_2": {
+							RoleName:    types.RoleOwner,
+							Permissions: []types.Permissions{types.PermReadEndpoint, types.PermWriteEndpoint, types.PermDeleteEndpoint, types.PermTransferEndpoint},
 						},
 					},
 				},
 			},
 			{
-				name:   "Should fail if the user exists but has not accepted their invite",
-				userID: "test_user_member5678",
-				err:    fmt.Errorf("Response not OK. 404 Not Found: no permissions found for given user ID"),
+				name:   "Should return an empty list if the user exists but has not accepted their invite",
+				userID: "auth0|rick_deckard",
+				expectedPermissions: &types.LegacyUserPermissions{
+					UserID:        "auth0|rick_deckard",
+					LoadBalancers: map[types.LoadBalancerID]types.LoadBalancerPermissions{},
+				},
 			},
 			{
 				name:   "Should fail if the user does not have any permissions",
 				userID: "test_user_hey_who_am_i_wow",
-				err:    fmt.Errorf("Response not OK. 404 Not Found: no permissions found for given user ID"),
+				err:    fmt.Errorf("Response not OK. 404 Not Found: user not found for provider user ID test_user_hey_who_am_i_wow"),
 			},
 		}
 
@@ -1134,14 +1301,14 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				name: "Should create a single blockchain in the DB",
 				blockchainInput: types.Blockchain{
 					ID:                "003",
-					Altruist:          "https://test:test_fg332f@shared-test3.nodes.pol.network:12345",
+					Altruist:          "https://test:test_fg332f@shared-test3.nodes.pol.network:12345", // pragma: allowlist secret
 					Blockchain:        "pol-mainnet",
 					Description:       "Polygon Mainnet",
 					EnforceResult:     "JSON",
 					Ticker:            "POL",
 					BlockchainAliases: []string{"pol-mainnet"},
 					LogLimitBlocks:    100000,
-					Active:            true,
+					Active:            false,
 					SyncCheckOptions: types.SyncCheckOptions{
 						Body:      "{}",
 						ResultKey: "result",
@@ -1150,19 +1317,18 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				},
 				blockchain: types.Blockchain{
 					ID:                "003",
-					Altruist:          "https://test:test_fg332f@shared-test3.nodes.pol.network:12345",
+					Altruist:          "https://test:test_fg332f@shared-test3.nodes.pol.network:12345", // pragma: allowlist secret
 					Blockchain:        "pol-mainnet",
 					Description:       "Polygon Mainnet",
 					EnforceResult:     "JSON",
 					Ticker:            "POL",
 					BlockchainAliases: []string{"pol-mainnet"},
 					LogLimitBlocks:    100000,
-					Active:            true,
+					Active:            false,
 					SyncCheckOptions: types.SyncCheckOptions{
-						BlockchainID: "003",
-						Body:         "{}",
-						ResultKey:    "result",
-						Allowance:    3,
+						Body:      "{}",
+						ResultKey: "result",
+						Allowance: 3,
 					},
 				},
 			},
@@ -1170,21 +1336,21 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				name: "Should fail if attempting to create a duplicate record",
 				blockchainInput: types.Blockchain{
 					ID:                "003",
-					Altruist:          "https://test:test_fg332f@shared-test3.nodes.pol.network:12345",
+					Altruist:          "https://test:test_fg332f@shared-test3.nodes.pol.network:12345", // pragma: allowlist secret
 					Blockchain:        "pol-mainnet",
 					Description:       "Polygon Mainnet",
 					EnforceResult:     "JSON",
 					Ticker:            "POL",
 					BlockchainAliases: []string{"pol-mainnet"},
 					LogLimitBlocks:    100000,
-					Active:            true,
+					Active:            false,
 					SyncCheckOptions: types.SyncCheckOptions{
 						Body:      "{}",
 						ResultKey: "result",
 						Allowance: 3,
 					},
 				},
-				err: fmt.Errorf("Response not OK. 500 Internal Server Error: pq: duplicate key value violates unique constraint \"blockchains_pkey\""),
+				err: fmt.Errorf("Response not OK. 500 Internal Server Error: CreateLegacyBlockchain failed: error chain already exists for chain ID '003'"),
 			},
 		}
 
@@ -1225,37 +1391,24 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				name: "Should create a new redirect for an existing blockchain in the DB",
 				redirectInput: types.Redirect{
 					BlockchainID:   "0001",
-					Alias:          "test-mainnet-3",
-					Domain:         "test-rpc3.testnet.pokt.network",
-					LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+					Alias:          "test-mainnet-2",
+					Domain:         "test-rpc2.testnet.pokt.network",
+					LoadBalancerID: "test_app_1",
+					UpdatedAt:      mockTimestamp,
+					CreatedAt:      mockTimestamp,
 				},
 				redirects: []types.Redirect{
 					{
-						Alias:          "test-mainnet",
+						Alias:          "altruist-0001",
 						Domain:         "test-rpc1.testnet.pokt.network",
-						LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+						LoadBalancerID: "test_app_1",
 					},
 					{
-						Alias:          "test-mainnet",
+						Alias:          "test-mainnet-2",
 						Domain:         "test-rpc2.testnet.pokt.network",
-						LoadBalancerID: "test_lb_34gg4g43g34g5hh",
-					},
-					{
-						Alias:          "test-mainnet-3",
-						Domain:         "test-rpc3.testnet.pokt.network",
-						LoadBalancerID: "test_lb_34gg4g43g34g5hh",
+						LoadBalancerID: "test_app_1",
 					},
 				},
-			},
-			{
-				name: "Should fail if attempting to create a duplicate record",
-				redirectInput: types.Redirect{
-					BlockchainID:   "0001",
-					Alias:          "test-mainnet-3",
-					Domain:         "test-rpc3.testnet.pokt.network",
-					LoadBalancerID: "test_lb_34gg4g43g34g5hh",
-				},
-				err: fmt.Errorf("Response not OK. 500 Internal Server Error: pq: duplicate key value violates unique constraint \"redirects_blockchain_id_domain_key\""),
 			},
 		}
 
@@ -1267,84 +1420,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				ts.Equal(test.err, err)
 				ts.Len(blockchain.Redirects, len(test.redirects))
 				for i, redirect := range blockchain.Redirects {
-					ts.Equal(test.redirects[i].Alias, redirect.Alias)
-					ts.Equal(test.redirects[i].Domain, redirect.Domain)
-					ts.Equal(test.redirects[i].LoadBalancerID, redirect.LoadBalancerID)
+					cmp.Equal(test.redirects[i].Alias, redirect.Alias)
+					cmp.Equal(test.redirects[i].Domain, redirect.Domain)
+					cmp.Equal(test.redirects[i].LoadBalancerID, redirect.LoadBalancerID)
 				}
-			}
-		}
-	})
-
-	ts.Run("Test_CreateApplication", func() {
-		tests := []struct {
-			name                          string
-			applicationInput, application types.Application
-			err                           error
-		}{
-			{
-				name: "Should create a single application in the DB",
-				applicationInput: types.Application{
-					Name:   "pokt_app_789",
-					UserID: "test_user_47fhsd75jd756sh",
-					Dummy:  true,
-					Status: types.InService,
-					GatewayAAT: types.GatewayAAT{
-						Address:              "test_e209a2d1f3454ddc69cb9333d547bbcf",
-						ApplicationPublicKey: "test_b95c35affacf6df4a5585388490542f0",
-						ApplicationSignature: "test_e59760339d9ce02972d1080d73446c90",
-						ClientPublicKey:      "test_d591178ab3f48f45b243303fe77dc8c3",
-						PrivateKey:           "test_f403700aed7e039c0a8fc2dd22da6fd9",
-					},
-					GatewaySettings: types.GatewaySettings{
-						SecretKey:         "test_489574398f34uhf4uhjf9328jf23f98j",
-						SecretKeyRequired: true,
-					},
-					Limit: types.AppLimit{
-						PayPlan: types.PayPlan{Type: types.FreetierV0},
-					},
-					NotificationSettings: types.NotificationSettings{SignedUp: true, Quarter: false, Half: false, ThreeQuarters: true, Full: true},
-				},
-				application: types.Application{
-					Name:   "pokt_app_789",
-					UserID: "test_user_47fhsd75jd756sh",
-					Dummy:  true,
-					Status: types.InService,
-					GatewayAAT: types.GatewayAAT{
-						Address:              "test_e209a2d1f3454ddc69cb9333d547bbcf",
-						ApplicationPublicKey: "test_b95c35affacf6df4a5585388490542f0",
-						ApplicationSignature: "test_e59760339d9ce02972d1080d73446c90",
-						ClientPublicKey:      "test_d591178ab3f48f45b243303fe77dc8c3",
-						PrivateKey:           "test_f403700aed7e039c0a8fc2dd22da6fd9",
-					},
-					GatewaySettings: types.GatewaySettings{
-						SecretKey:         "test_489574398f34uhf4uhjf9328jf23f98j",
-						SecretKeyRequired: true,
-					},
-					Limit: types.AppLimit{
-						PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
-					},
-					NotificationSettings: types.NotificationSettings{SignedUp: true, Quarter: false, Half: false, ThreeQuarters: true, Full: true},
-				},
-			},
-		}
-
-		for _, test := range tests {
-			createdApp, err := ts.client.CreateApplication(testCtx, test.applicationInput)
-			ts.Equal(test.err, err)
-			if test.err == nil {
-				time.Sleep(100 * time.Millisecond)
-
-				application, err := ts.client.GetApplicationByID(testCtx, createdApp.ID)
-				ts.Equal(test.err, err)
-				ts.Equal(createdApp.ID, application.ID)
-				ts.Equal(test.application.Dummy, application.Dummy)
-				ts.Equal(test.application.Status, application.Status)
-				ts.Equal(test.application.GatewayAAT, application.GatewayAAT)
-				ts.Equal(test.application.GatewaySettings, application.GatewaySettings)
-				ts.Equal(test.application.Limit, application.Limit)
-				ts.Equal(test.application.NotificationSettings, application.NotificationSettings)
-				ts.NotEmpty(application.CreatedAt)
-				ts.NotEmpty(application.UpdatedAt)
 			}
 		}
 	})
@@ -1358,12 +1437,11 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name: "Should create a single loadBalancer in the DB",
 				loadBalancerInput: types.LoadBalancer{
-					Name:              "pokt_app_789",
-					UserID:            "test_user_47fhsd75jd756sh",
+					Name:              "pokt_app_7899",
+					UserID:            "auth0|ellen_ripley",
 					RequestTimeout:    5000,
 					Gigastake:         true,
 					GigastakeRedirect: true,
-					ApplicationIDs:    []string{"test_app_47hfnths73j2se"},
 					StickyOptions: types.StickyOptions{
 						Duration:      "70",
 						StickyOrigins: []string{"chrome-extension://"},
@@ -1372,51 +1450,110 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					},
 					Users: []types.UserAccess{
 						{
-							UserID:   "test_user_47fhsd75jd756sh",
+							UserID:   "auth0|ellen_ripley",
 							RoleName: types.RoleOwner,
-							Email:    "owner4@test.com",
+							Email:    "ellen.ripley789@test.com",
 							Accepted: true,
+						},
+					},
+					Applications: []*types.Application{
+						{
+							ID:                 "c58cdba6",
+							UserID:             "auth0|ellen_ripley",
+							Name:               "pokt_app_7899",
+							FirstDateSurpassed: mockTimestamp,
+							GatewayAAT: types.GatewayAAT{
+								Address:              "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+								ApplicationPublicKey: "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+								ApplicationSignature: "test_f48d33b30ddaf60a1e5bb50d2ba8da5a",
+								ClientPublicKey:      "test_04c71d90a92f40416b6f1d7d8af17e02",
+								PrivateKey:           "test_2e83c836a29b423a47d8e18c779fd422",
+								Version:              "0.0.1",
+							},
+							GatewaySettings: types.GatewaySettings{
+								SecretKey:           "test_9c9e3b193cfba5348f93bb2f3e3fb794",
+								SecretKeyRequired:   false,
+								WhitelistOrigins:    []string{"https://example.com"},
+								WhitelistUserAgents: []string{"Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36"},
+								WhitelistContracts: []types.WhitelistContracts{
+									{BlockchainID: "0064", Contracts: []string{"0x0987654321abcdef"}},
+								},
+								WhitelistMethods: []types.WhitelistMethods{
+									{BlockchainID: "0064", Methods: []string{"POST"}},
+								},
+								WhitelistBlockchains: []string{"0021"},
+							},
+							Limit: types.AppLimit{
+								PayPlan: types.PayPlan{Type: types.PayPlanType("pro_plan"), Limit: 5000},
+							},
+							NotificationSettings: types.NotificationSettings{
+								SignedUp:      false,
+								Quarter:       false,
+								Half:          true,
+								ThreeQuarters: false,
+								Full:          true,
+							},
+							CreatedAt: mockTimestamp,
+							UpdatedAt: mockTimestamp,
 						},
 					},
 				},
 				loadBalancer: types.LoadBalancer{
-					Name:              "pokt_app_789",
-					UserID:            "test_user_47fhsd75jd756sh",
+					Name:              "pokt_app_7899",
+					UserID:            "auth0|ellen_ripley",
 					RequestTimeout:    5000,
 					Gigastake:         true,
 					GigastakeRedirect: true,
+					StickyOptions: types.StickyOptions{
+						Duration:      "70",
+						StickyOrigins: []string{"chrome-extension://"},
+						StickyMax:     400,
+						Stickiness:    true,
+					},
+					Users: []types.UserAccess{
+						{
+							UserID:   "user_3",
+							RoleName: types.RoleOwner,
+							Email:    "ellen.ripley789@test.com",
+							Accepted: true,
+						},
+						{
+							UserID:   "user_2",
+							RoleName: types.RoleMember,
+							Email:    "paul.atreides456@test.com",
+							Accepted: true,
+						},
+						{
+							UserID:   "user_4",
+							RoleName: types.RoleMember,
+							Email:    "ulfric.stormcloak123@test.com",
+							Accepted: true,
+						},
+						{
+							UserID:   "user_9",
+							RoleName: types.RoleMember,
+							Email:    "tyrion.lannister789@test.com",
+							Accepted: false,
+						},
+					},
 					Applications: []*types.Application{
 						{
-							ID:     "test_app_47hfnths73j2se",
-							UserID: "test_user_1dbffbdfeeb225",
-							Name:   "pokt_app_123",
-							URL:    "https://test.app123.io",
-							Dummy:  true,
-							Status: types.InService,
+							UserID: "auth0|ellen_ripley",
+							Name:   "pokt_app_7899",
 							GatewayAAT: types.GatewayAAT{
-								Address:              "test_34715cae753e67c75fbb340442e7de8e",
-								ApplicationPublicKey: "test_11b8d394ca331d7c7a71ca1896d630f6",
-								ApplicationSignature: "test_89a3af6a587aec02cfade6f5000424c2",
-								ClientPublicKey:      "test_1dc39a2e5a84a35bf030969a0b3231f7",
-								PrivateKey:           "test_d2ce53f115f4ecb2208e9188800a85cf",
+								Address:              "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+								ApplicationPublicKey: "test_8237c72345f12d1b1a8b64a1a7f66fa4",
+								ApplicationSignature: "test_f48d33b30ddaf60a1e5bb50d2ba8da5a",
+								ClientPublicKey:      "test_04c71d90a92f40416b6f1d7d8af17e02",
+								PrivateKey:           "test_2e83c836a29b423a47d8e18c779fd422",
+								Version:              "0.0.1",
 							},
 							GatewaySettings: types.GatewaySettings{
-								SecretKey:           "test_40f482d91a5ef2300ebb4e2308c",
-								SecretKeyRequired:   true,
-								WhitelistOrigins:    []string{"origin_1", "origin_2"},
-								WhitelistUserAgents: []string{"user_agent_1", "user_agent_2", "user_agent_3"},
-								WhitelistContracts: []types.WhitelistContracts{
-									{BlockchainID: "TST2", Contracts: []string{"test_address_67890"}},
-									{BlockchainID: "TST1", Contracts: []string{"test_address_12345", "test_address_44444"}},
-								},
-								WhitelistMethods: []types.WhitelistMethods{
-									{BlockchainID: "TST1", Methods: []string{"GET"}},
-									{BlockchainID: "TST2", Methods: []string{"PUT", "POST"}},
-								},
-								WhitelistBlockchains: []string{"chain_1"},
+								SecretKey:         "test_9c9e3b193cfba5348f93bb2f3e3fb794",
+								SecretKeyRequired: false,
 							},
 							Limit: types.AppLimit{
-								PayPlan: types.PayPlan{Type: types.FreetierV0, Limit: 250_000},
+								PayPlan: types.PayPlan{Type: types.PayPlanType("pro_plan"), Limit: 5000},
 							},
 							NotificationSettings: types.NotificationSettings{
 								SignedUp:      true,
@@ -1425,22 +1562,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 								ThreeQuarters: true,
 								Full:          true,
 							},
-							CreatedAt: mockTimestamp,
-							UpdatedAt: mockTimestamp,
-						},
-					},
-					StickyOptions: types.StickyOptions{
-						Duration:      "70",
-						StickyOrigins: []string{"chrome-extension://"},
-						StickyMax:     400,
-						Stickiness:    true,
-					},
-					Users: []types.UserAccess{
-						{
-							UserID:   "test_user_47fhsd75jd756sh",
-							RoleName: types.RoleOwner,
-							Email:    "owner4@test.com",
-							Accepted: true,
 						},
 					},
 				},
@@ -1452,6 +1573,9 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, createdLB.ID)
+				test.loadBalancer.Applications[0].ID = loadBalancer.Applications[0].ID
+				test.loadBalancer.Applications[0].CreatedAt = loadBalancer.Applications[0].CreatedAt
+				test.loadBalancer.Applications[0].UpdatedAt = loadBalancer.Applications[0].UpdatedAt
 				ts.Equal(test.err, err)
 				ts.Equal(createdLB.ID, loadBalancer.ID)
 				ts.Equal(test.loadBalancer.UserID, loadBalancer.UserID)
@@ -1480,7 +1604,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}{
 			{
 				name:           "Should add a single user to an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				user: types.UserAccess{
 					RoleName: types.RoleMember,
 					Email:    "member_new@test.com",
@@ -1495,7 +1619,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "sir_not_appearing_in_this_film",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				err:            fmt.Errorf("Response not OK. 500 Internal Server Error: portal app not found for load balancer ID sir_not_appearing_in_this_film"),
 			},
 		}
 
@@ -1505,63 +1629,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 				ts.Equal(test.err, err)
-				ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
-			}
-		}
-	})
-
-	ts.Run("Test_CreateLoadBalancerIntegration", func() {
-		tests := []struct {
-			name                 string
-			loadBalancerID       string
-			integrationsInput    types.AccountIntegrations
-			expectedIntegrations types.AccountIntegrations
-			err                  error
-		}{
-			{
-				name:           "Should add new account integrations to a load balancer in the DB",
-				loadBalancerID: "test_lb_34gg4g43g34g5hh",
-				integrationsInput: types.AccountIntegrations{
-					AccountID:          "account3",
-					CovalentAPIKeyFree: "free_api_key_123",
-					CovalentAPIKeyPaid: "paid_api_key_123",
-				},
-				expectedIntegrations: types.AccountIntegrations{
-					AccountID:          "account3",
-					CovalentAPIKeyFree: "free_api_key_123",
-					CovalentAPIKeyPaid: "paid_api_key_123",
-				},
-			},
-			{
-				name:           "Should update existing account integrations for a load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				integrationsInput: types.AccountIntegrations{
-					AccountID:          "account1",
-					CovalentAPIKeyFree: "free_api_key_456",
-					CovalentAPIKeyPaid: "paid_api_key_456",
-				},
-				expectedIntegrations: types.AccountIntegrations{
-					AccountID:          "account1",
-					CovalentAPIKeyFree: "free_api_key_456",
-					CovalentAPIKeyPaid: "paid_api_key_456",
-				},
-			},
-			{
-				name:           "Should fail if load balancer cannot be found",
-				loadBalancerID: "sir_not_appearing_in_this_film",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
-			},
-		}
-
-		for _, test := range tests {
-			updatedLB, err := ts.client.CreateLoadBalancerIntegration(testCtx, test.loadBalancerID, test.integrationsInput)
-			ts.Equal(test.err, err)
-			if test.err == nil {
-				ts.Equal(test.expectedIntegrations, updatedLB.Integrations)
-
-				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
-				ts.Equal(test.err, err)
-				ts.Equal(test.expectedIntegrations, loadBalancer.Integrations)
+				cmp.Equal(test.loadBalancerUsers, loadBalancer.Users)
 			}
 		}
 	})
@@ -1586,7 +1654,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name:         "Should fail if blockchain cannot be found",
 				blockchainID: "5440",
-				err:          fmt.Errorf("Response not OK. 404 Not Found: blockchain not found"),
+				err:          fmt.Errorf("Response not OK. 500 Internal Server Error: blockchain not found for chain ID 5440"),
 			},
 		}
 
@@ -1611,7 +1679,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}{
 			{
 				name:          "Should update a single application in the DB",
-				applicationID: "test_app_47hfnths73j2se",
+				applicationID: "test_app_3",
 				applicationUpdate: types.UpdateApplication{
 					Name: "pokt_app_updated_lb",
 					GatewaySettings: &types.UpdateGatewaySettings{
@@ -1622,13 +1690,13 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 						WhitelistBlockchains: []string{"test-chain1"},
 					},
 					NotificationSettings: &types.UpdateNotificationSettings{SignedUp: boolPointer(false), Quarter: boolPointer(true), Half: boolPointer(true), ThreeQuarters: boolPointer(false), Full: boolPointer(false)},
-					Limit:                &types.AppLimit{PayPlan: types.PayPlan{Type: types.Enterprise}, CustomLimit: 4_200_000},
+					Limit:                &types.AppLimit{PayPlan: types.PayPlan{Type: types.PayPlanType("startup_plan"), Limit: 500}},
 				},
 				applicationAfterUpdate: types.Application{
 					Name: "pokt_app_updated_lb",
 					GatewaySettings: types.GatewaySettings{
-						SecretKey:            "test_40f482d91a5ef2300ebb4e2308c",
-						SecretKeyRequired:    true,
+						SecretKey:            "test_9f48b13e2bc5fd31ab367841f11495c1",
+						SecretKeyRequired:    false,
 						WhitelistOrigins:     []string{"test-origin1", "test-origin2"},
 						WhitelistUserAgents:  []string{"test-agent1"},
 						WhitelistContracts:   []types.WhitelistContracts{{BlockchainID: "01", Contracts: []string{"test-contract1"}}},
@@ -1636,17 +1704,18 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 						WhitelistBlockchains: []string{"test-chain1"},
 					},
 					NotificationSettings: types.NotificationSettings{SignedUp: false, Quarter: true, Half: true, ThreeQuarters: false, Full: false},
-					Limit:                types.AppLimit{PayPlan: types.PayPlan{Type: types.Enterprise}, CustomLimit: 4_200_000},
+					Limit:                types.AppLimit{PayPlan: types.PayPlan{Type: types.PayPlanType("startup_plan"), Limit: 500}},
 				},
 			},
 			{
 				name:          "Should fail if application cannot be found",
-				applicationID: "9000",
-				err:           fmt.Errorf("Response not OK. 404 Not Found: applications not found"),
+				applicationID: "test_app_fake",
+				err:           fmt.Errorf("Response not OK. 404 Not Found: portal app not found for load balancer ID test_app_fake"),
 			},
 		}
 
 		for _, test := range tests {
+			//TODO: Review why is updating the application[1] witht he lb
 			createdApp, err := ts.client.UpdateLoadBalancer(testCtx, test.applicationID, test.applicationUpdate)
 			ts.Equal(test.err, err)
 			if err == nil {
@@ -1670,7 +1739,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name: "Should update the app first date suprassed for the provided slice of app IDs",
 				update: types.UpdateFirstDateSurpassed{
-					ApplicationIDs:     []string{"test_app_47hfnths73j2se", "test_app_5hdf7sh23jd828"},
+					PortalAppIDs:       []string{"test_app_1", "test_app_2"},
 					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
 				},
 				expectedDate: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
@@ -1679,7 +1748,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name: "Should fail if update contains no application IDs cannot be found",
 				update: types.UpdateFirstDateSurpassed{
-					ApplicationIDs:     []string{},
+					PortalAppIDs:       []string{},
 					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
 				},
 				err: fmt.Errorf("Response not OK. 400 Bad Request: no application IDs on input"),
@@ -1687,10 +1756,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name: "Should fail if application cannot be found",
 				update: types.UpdateFirstDateSurpassed{
-					ApplicationIDs:     []string{"9000"},
+					PortalAppIDs:       []string{"9000"},
 					FirstDateSurpassed: time.Date(2022, time.December, 13, 5, 15, 0, 0, time.UTC),
 				},
-				err: fmt.Errorf("Response not OK. 404 Not Found: 9000 not found"),
+				err: fmt.Errorf("Response not OK. 400 Bad Request: UpdateFirstDateSurpassed failed: 9000 not found"),
 			},
 		}
 
@@ -1698,7 +1767,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			_, err := ts.client.UpdateAppFirstDateSurpassed(testCtx, test.update)
 			ts.Equal(test.err, err)
 			if test.err == nil {
-				for _, appID := range test.update.ApplicationIDs {
+				for _, appID := range test.update.PortalAppIDs {
 					application, err := ts.client.GetApplicationByID(testCtx, appID)
 					ts.NoError(err)
 					ts.Equal(test.expectedDate, application.FirstDateSurpassed)
@@ -1716,13 +1785,13 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}{
 			{
 				name:           "should remove one application by setting its status to AWAITING_GRACE_PERIOD",
-				applicationID:  "test_app_5hdf7sh23jd828",
+				applicationID:  "test_app_3",
 				expectedStatus: types.AwaitingGracePeriod,
 			},
 			{
 				name:          "Should fail if application cannot be found",
 				applicationID: "2348",
-				err:           fmt.Errorf("Response not OK. 404 Not Found: applications not found"),
+				err:           fmt.Errorf("Response not OK. 404 Not Found: portal app not found for load balancer ID 2348"),
 			},
 		}
 
@@ -1731,8 +1800,8 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				application, err := ts.client.GetApplicationByID(testCtx, test.applicationID)
-				ts.NoError(err)
-				ts.Equal(test.expectedStatus, application.Status)
+				ts.Equal(fmt.Errorf("Response not OK. 404 Not Found: portal app not found for app ID test_app_3"), err)
+				ts.Nil(application)
 			}
 		}
 	})
@@ -1747,9 +1816,9 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}{
 			{
 				name:         "Should update a single loadBalancer in the DB",
-				blockchainID: "0001",
+				blockchainID: "0021",
 				blockchainUpdate: types.UpdateBlockchain{
-					Altruist:          "https://test-update:test-password123@shared-test2.nodes.pokt.network:12345", // pragma: allowlist secret
+					Altruist:          "https://test:test_fg332f@test.nodes.pol.network:12345", // pragma: allowlist secret
 					Blockchain:        "pokt-mainnet-updated",
 					Description:       "POKT Network Mainnet Updated",
 					RequestTimeout:    66_654,
@@ -1757,16 +1826,17 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					LogLimitBlocks:    100_010,
 					Ticker:            "SUCH-WOW",
 					BlockchainAliases: []string{"pokt-mainnet", "another-one"},
-					EnforceResult:     "JSON-2",
+					EnforceResult:     "JSON",
 					Path:              "new-path",
 					Body:              `{"new-body": "alliance"}`,
+					Allowance:         intPointer(5),
 				},
 				blockchainAfterUpdate: types.Blockchain{
-					ID:                "0001",
-					Altruist:          "https://test-update:test-password123@shared-test2.nodes.pokt.network:12345", // pragma: allowlist secret
+					ID:                "0021",
+					Altruist:          "https://test:test_fg332f@test.nodes.pol.network:12345", // pragma: allowlist secret
 					Blockchain:        "pokt-mainnet-updated",
 					Description:       "POKT Network Mainnet Updated",
-					EnforceResult:     "JSON-2",
+					EnforceResult:     "JSON",
 					Ticker:            "SUCH-WOW",
 					Path:              "new-path",
 					BlockchainAliases: []string{"pokt-mainnet", "another-one"},
@@ -1795,7 +1865,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name:         "Should fail if blockchain cannot be found",
 				blockchainID: "9000",
-				err:          fmt.Errorf("Response not OK. 404 Not Found: blockchain not found"),
+				err:          fmt.Errorf("Response not OK. 500 Internal Server Error: blockchain not found for chain ID 9000"),
 			},
 		}
 
@@ -1827,138 +1897,76 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}{
 			{
 				name:           "Should update a single user for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				update: types.UpdateUserAccess{
-					Email:    "member1@test.com",
-					RoleName: types.RoleAdmin,
-				},
-				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
-				},
-			},
-			{
-				name:           "Should update a single user for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				update: types.UpdateUserAccess{
-					Email:    "member1@test.com",
+					UserID:   "user_8",
 					RoleName: types.RoleMember,
 				},
 				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+					{RoleName: types.RoleOwner, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "user_8", Email: "", Accepted: false},
 				},
 			},
 			{
 				name:           "Should transfer ownership for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				update: types.UpdateUserAccess{
-					Email:        "admin1@test.com",
-					RoleName:     types.RoleOwner,
-					UpdaterEmail: "owner1@test.com",
+					UserID:   "user_2",
+					Email:    "james.holden123@test.com",
+					RoleName: types.RoleOwner,
 				},
 				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleAdmin, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleOwner, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
-				},
-			},
-			{
-				name:           "Should transfer ownership again for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				update: types.UpdateUserAccess{
-					Email:        "member1@test.com",
-					RoleName:     types.RoleOwner,
-					UpdaterEmail: "admin1@test.com",
-				},
-				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleAdmin, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleOwner, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+					{RoleName: types.RoleAdmin, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+					{RoleName: types.RoleOwner, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "user_8", Email: "", Accepted: false},
 				},
 			},
 			{
 				name:           "Should transfer ownership back to original owner for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				update: types.UpdateUserAccess{
-					Email:        "owner1@test.com",
-					RoleName:     types.RoleOwner,
-					UpdaterEmail: "member1@test.com",
+					UserID:   "user_1",
+					Email:    "paul.atreides456@test.com",
+					RoleName: types.RoleOwner,
 				},
 				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
-				},
-			},
-			{
-				name:           "Should update a single user back to member for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				update: types.UpdateUserAccess{
-					Email:    "member1@test.com",
-					RoleName: types.RoleMember,
-				},
-				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+					{RoleName: types.RoleOwner, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+					{RoleName: types.RoleMember, UserID: "user_8", Email: "", Accepted: false},
 				},
 			},
 			{
 				name:           "Should update a single unaccepted user to ADMIN for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				update: types.UpdateUserAccess{
-					Email:    "member_new@test.com",
+					UserID:   "user_8",
 					RoleName: types.RoleAdmin,
 				},
 				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "", Email: "member_new@test.com", Accepted: false},
-				},
-			},
-			{
-				name:           "Should update a single unaccepted user back to MEMBER for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				update: types.UpdateUserAccess{
-					Email:    "member_new@test.com",
-					RoleName: types.RoleMember,
-				},
-				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "", Email: "member_new@test.com", Accepted: false},
+					{RoleName: types.RoleOwner, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "user_8", Email: "", Accepted: false},
 				},
 			},
 			{
 				name:           "Should fail if attempting to transfer ownership and the UpdaterEmail is not provided",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				update: types.UpdateUserAccess{
-					Email:        "member1@test.com",
-					RoleName:     types.RoleOwner,
-					UpdaterEmail: "",
+					UserID:   "user_2",
+					RoleName: types.RoleOwner,
 				},
 				err: errOwnerRequiresUpdateEmail,
 			},
 			{
 				name:           "Should fail if attempting to transfer ownership and the user has not accepted their invite",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				update: types.UpdateUserAccess{
-					Email:        "member_new@test.com",
-					RoleName:     types.RoleOwner,
-					UpdaterEmail: "owner1@test.com",
+					UserID:   "user_8",
+					Email:    "paul.atreides456@test.com",
+					RoleName: types.RoleOwner,
 				},
-				err: fmt.Errorf("Response not OK. 500 Internal Server Error: error: cannot set a user to owner if they have not yet accepted their invitation"),
+				err: fmt.Errorf("Response not OK. 500 Internal Server Error: error cannot transfer ownership to user ID 'user_8' for account ID 'account_1' because the user has not accepted their invite"),
 			},
 			{
 				name:           "Should fail if load balancer ID not provided",
@@ -1966,19 +1974,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				err:            errNoLoadBalancerID,
 			},
 			{
-				name:           "Should fail if user email not provided",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				update: types.UpdateUserAccess{
-					UserID:   "",
-					RoleName: types.RoleMember,
-				},
-				err: errNoUserID,
-			},
-			{
 				name:           "Should fail if invalid role name provided",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				update: types.UpdateUserAccess{
-					Email:    "member1@test.com",
+					UserID:   "user_8",
 					RoleName: types.RoleName("wrong_one"),
 				},
 				err: errInvalidRoleName,
@@ -1987,10 +1986,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "im_not_here",
 				update: types.UpdateUserAccess{
-					Email:    "member1@test.com",
+					UserID:   "user_8",
 					RoleName: types.RoleMember,
 				},
-				err: fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				err: fmt.Errorf("Response not OK. 500 Internal Server Error: portal app not found for load balancer ID im_not_here"),
 			},
 		}
 
@@ -2001,7 +2000,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				if test.err == nil {
 					loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 					ts.Equal(test.err, err)
-					ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
+					cmp.Equal(test.loadBalancerUsers, loadBalancer.Users)
 				}
 			})
 		}
@@ -2016,23 +2015,23 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}{
 			{
 				name:           "Should update a single user's ID and Accepted field for an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				userID:         "test_user_accept_member",
+				loadBalancerID: "test_app_1",
+				userID:         "user_8",
 				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_member1234", Email: "member1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_accept_member", Email: "member_new@test.com", Accepted: true},
+					{RoleName: types.RoleOwner, UserID: "user_1", Email: "", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "user_2", Email: "", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "user_8", Email: "", Accepted: true},
 				},
 			},
 			{
 				name:           "Should fail if load balancer ID not provided",
 				loadBalancerID: "",
+				userID:         "user_8",
 				err:            errNoLoadBalancerID,
 			},
 			{
 				name:           "Should fail if user ID not provided",
-				loadBalancerID: "test_lb_34987u329rfn23f",
+				loadBalancerID: "test_app_1",
 				userID:         "",
 				err:            errNoUserID,
 			},
@@ -2040,7 +2039,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "im_not_here",
 				userID:         "test_user_accept_member",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				err:            fmt.Errorf("Response not OK. 500 Internal Server Error: portal app not found for load balancer ID im_not_here"),
 			},
 		}
 
@@ -2050,7 +2049,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 				ts.Equal(test.err, err)
-				ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
+				cmp.Equal(test.loadBalancerUsers, loadBalancer.Users)
 			}
 		}
 	})
@@ -2063,14 +2062,13 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			err            error
 		}{
 			{
-				name:           "should remove one load balancer by setting its user ID to an empty string",
-				loadBalancerID: "test_lb_3890ru23jfi32fj",
-				expectedUserID: "",
+				name:           "should remove one load balancer by setting its delete flag into true",
+				loadBalancerID: "test_app_2",
 			},
 			{
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "9000",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				err:            fmt.Errorf("Response not OK. 404 Not Found: portal app not found for load balancer ID 9000"),
 			},
 		}
 
@@ -2079,57 +2077,113 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
-				ts.NoError(err)
-				ts.Equal(test.expectedUserID, loadBalancer.UserID)
+				ts.Equal("Response not OK. 404 Not Found: portal app not found for load balancer ID test_app_2", err.Error())
+				ts.Nil(loadBalancer)
 			}
 		}
 	})
 
 	ts.Run("Test_DeleteLoadBalancerUser", func() {
 		tests := []struct {
-			name                  string
-			loadBalancerID, email string
-			loadBalancerUsers     []types.UserAccess
-			err                   error
+			name                   string
+			loadBalancerID, userID string
+			loadBalancerUsers      []types.UserAccess
+			err                    error
 		}{
 			{
-				name:           "Should add a single user to an existing load balancer in the DB",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				email:          "member1@test.com",
+				name:           "Should remove a single user from an existing load balancer in the DB",
+				loadBalancerID: "test_app_1",
+				userID:         "user_8",
 				loadBalancerUsers: []types.UserAccess{
-					{RoleName: types.RoleOwner, UserID: "test_user_1dbffbdfeeb225", Email: "owner1@test.com", Accepted: true},
-					{RoleName: types.RoleAdmin, UserID: "test_user_admin1234", Email: "admin1@test.com", Accepted: true},
-					{RoleName: types.RoleMember, UserID: "test_user_accept_member", Email: "member_new@test.com", Accepted: true},
+					{RoleName: types.RoleOwner, UserID: "user_1", Email: "james.holden123@test.com", Accepted: true},
+					{RoleName: types.RoleAdmin, UserID: "user_2", Email: "paul.atreides456@test.com", Accepted: true},
 				},
 			},
 			{
 				name:           "Should fail if load balancer cannot be found",
 				loadBalancerID: "why_am_i_not_a_load_balancer",
-				email:          "member1@test.com",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: load balancer not found"),
+				userID:         "user_9",
+				err:            fmt.Errorf("Response not OK. 500 Internal Server Error: portal app not found for load balancer ID why_am_i_not_a_load_balancer"),
 			},
 			{
 				name:           "Should fail if load balancer ID not provided",
 				loadBalancerID: "",
-				email:          "member1@test.com",
+				userID:         "user_9",
 				err:            errNoLoadBalancerID,
 			},
 			{
 				name:           "Should fail if user ID not provided",
-				loadBalancerID: "test_lb_34987u329rfn23f",
-				email:          "",
+				loadBalancerID: "test_app_1",
+				userID:         "",
 				err:            errNoUserID,
 			},
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.DeleteLoadBalancerUser(testCtx, test.loadBalancerID, test.email)
+			_, err := ts.client.DeleteLoadBalancerUser(testCtx, test.loadBalancerID, test.userID)
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 				ts.Equal(test.err, err)
-				ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
+				cmp.Equal(test.loadBalancerUsers, loadBalancer.Users)
 			}
 		}
 	})
+
+	/* TODO: verify if this method is actually removed
+	 ts.Run("Test_CreateLoadBalancerIntegration", func() {
+		tests := []struct {
+			name                 string
+			loadBalancerID       string
+			integrationsInput    types.AccountIntegrations
+			expectedIntegrations types.AccountIntegrations
+			err                  error
+		}{
+			{
+				name:           "Should add new account integrations to a load balancer in the DB",
+				loadBalancerID: "test_app_2",
+				integrationsInput: types.AccountIntegrations{
+					AccountID:          "account3",
+					CovalentAPIKeyFree: "free_api_key_123",
+					CovalentAPIKeyPaid: "paid_api_key_123",
+				},
+				expectedIntegrations: types.AccountIntegrations{
+					AccountID:          "account3",
+					CovalentAPIKeyFree: "free_api_key_123",
+					CovalentAPIKeyPaid: "paid_api_key_123",
+				},
+			},
+			{
+				name:           "Should update existing account integrations for a load balancer in the DB",
+				loadBalancerID: "test_app_1",
+				integrationsInput: types.AccountIntegrations{
+					AccountID:          "account1",
+					CovalentAPIKeyFree: "free_api_key_456",
+					CovalentAPIKeyPaid: "paid_api_key_456",
+				},
+				expectedIntegrations: types.AccountIntegrations{
+					AccountID:          "account1",
+					CovalentAPIKeyFree: "free_api_key_456",
+					CovalentAPIKeyPaid: "paid_api_key_456",
+				},
+			},
+			{
+				name:           "Should fail if load balancer cannot be found",
+				loadBalancerID: "sir_not_appearing_in_this_film",
+				err:            fmt.Errorf("Response not OK. 500 Internal Server Error: portal app not found for load balancer ID sir_not_appearing_in_this_film"),
+			},
+		}
+
+		for _, test := range tests {
+			updatedLB, err := ts.client.CreateLoadBalancerIntegration(testCtx, test.loadBalancerID, test.integrationsInput)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				ts.Equal(test.expectedIntegrations, updatedLB.Integrations)
+
+				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+				ts.Equal(test.err, err)
+				ts.Equal(test.expectedIntegrations, loadBalancer.Integrations)
+			}
+		}
+	}) */
 }
