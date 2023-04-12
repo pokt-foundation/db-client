@@ -12,7 +12,7 @@ import (
 
 	"github.com/gojek/heimdall/v7/httpclient"
 	"github.com/gojektech/heimdall"
-	"github.com/pokt-foundation/portal-db/v2/types"
+	"github.com/pokt-foundation/portal-db/types"
 )
 
 type (
@@ -64,7 +64,7 @@ type (
 		// GetPayPlanByType returns a single Pay Plan by its type - GET `<base URL>/<version>/pay_plan/{type}`
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 		// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
-		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.LegacyUserPermissions, error)
+		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
@@ -291,7 +291,7 @@ func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string,
 	if roleNameFilter != nil {
 		filter := *roleNameFilter
 
-		if !filter.IsValid() {
+		if !types.ValidRoleNames[filter] {
 			return nil, errInvalidRoleNameFilter
 		}
 
@@ -342,14 +342,14 @@ func (db *DBClient) GetPayPlanByType(ctx context.Context, payPlanType types.PayP
 }
 
 // GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
-func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.LegacyUserPermissions, error) {
+func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(userPath), userID, permissionPath)
 
-	return get[*types.LegacyUserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	return get[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Create Methods -- */
@@ -483,7 +483,7 @@ func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancer
 	if update.UserID == "" {
 		return nil, errNoUserID
 	}
-	if update.RoleName == types.RoleName("") || !update.RoleName.IsValid() {
+	if update.RoleName == types.RoleName("") || !types.ValidRoleNames[update.RoleName] {
 		return nil, errInvalidRoleName
 	}
 	if update.RoleName == types.RoleOwner && update.Email == "" {
