@@ -12,7 +12,7 @@ import (
 
 	"github.com/gojek/heimdall/v7/httpclient"
 	"github.com/gojektech/heimdall"
-	"github.com/pokt-foundation/portal-db/types"
+	"github.com/pokt-foundation/portal-db/v2/types"
 )
 
 type (
@@ -55,16 +55,16 @@ type (
 		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`.*/
 		// This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
 		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
-		// GetPendingLoadBalancersByEmail returns all the pending load balancers for an email - GET `<base URL>/<version>/user/{email}/load_balancer/pending`.*/
-		GetPendingLoadBalancersByEmail(ctx context.Context, email string) ([]*types.LoadBalancer, error)
-		// GetLoadBalancersCountByEmail returns the number of loadbalancers owned by an email - GET `<base URL>/<version>/user/{email}/load_balancer/count`.`
-		GetLoadBalancersCountByEmail(ctx context.Context, email string) (int, error)
+		// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/pending`.*/
+		GetPendingLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error)
+		// GetLoadBalancersCountByUserID returns the number of loadbalancers owned by an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/count`.`
+		GetLoadBalancersCountByUserID(ctx context.Context, userID string) (int, error)
 		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
 		// GetPayPlanByType returns a single Pay Plan by its type - GET `<base URL>/<version>/pay_plan/{type}`
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 		// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
-		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error)
+		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.LegacyUserPermissions, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
@@ -72,8 +72,6 @@ type (
 		CreateBlockchain(ctx context.Context, blockchain types.Blockchain) (*types.Blockchain, error)
 		// CreateBlockchainRedirect creates a single Blockchain Redirect in the DB - POST `<base URL>/<version>/blockchain/redirect`
 		CreateBlockchainRedirect(ctx context.Context, redirect types.Redirect) (*types.Redirect, error)
-		// CreateApplication creates a single Application in the DB - POST `<base URL>/<version>/application`
-		CreateApplication(ctx context.Context, application types.Application) (*types.Application, error)
 		// CreateLoadBalancer creates a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer`
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
 		// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
@@ -82,8 +80,6 @@ type (
 		CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput types.AccountIntegrations) (*types.LoadBalancer, error)
 		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
-		// UpdateApplication updates a single Application in the DB - PUT `<base URL>/<version>/application/{id}`
-		UpdateApplication(ctx context.Context, id string, update types.UpdateApplication) (*types.Application, error)
 		// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - POST `<base URL>/<version>/first_date_surpassed`
 		UpdateAppFirstDateSurpassed(ctx context.Context, updateInput types.UpdateFirstDateSurpassed) ([]*types.Application, error)
 		// RemoveApplication removes a single Application by updating its status field - PUT `<base URL>/<version>/application/{id}` with Remove: true
@@ -91,15 +87,15 @@ type (
 		// UpdateBlockchain updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/blockchain/{id}`
 		UpdateBlockchain(ctx context.Context, blockchainID string, chainUpdate types.UpdateBlockchain) (*types.Blockchain, error)
 		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
-		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error)
+		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateApplication) (*types.LoadBalancer, error)
 		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
 		UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, update types.UpdateUserAccess) (*types.LoadBalancer, error)
 		// AcceptLoadBalancerUser updates a single User's UserID and Accepted fields for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/accept`
-		AcceptLoadBalancerUser(ctx context.Context, email, loadBalancerID, userID string) (*types.LoadBalancer, error)
+		AcceptLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
 		// RemoveLoadBalancer removes a single LoadBalancer by updating its user field to null - PUT `<base URL>/<version>/load_balancer/{id}` with Remove: true
 		RemoveLoadBalancer(ctx context.Context, id string) (*types.LoadBalancer, error)
-		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{email}`
-		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, email string) (*types.LoadBalancer, error)
+		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}`
+		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error)
 	}
 
 	basePath   string
@@ -140,7 +136,6 @@ var (
 	errNoUserID                 error = errors.New("no user ID")
 	errNoBlockchainID           error = errors.New("no blockchain ID")
 	errNoApplicationID          error = errors.New("no application ID")
-	errNoEmail                  error = errors.New("no user email")
 	errNoLoadBalancerID         error = errors.New("no load balancer ID")
 	errNoPayPlanType            error = errors.New("no pay plan type")
 	errInvalidBlockchainJSON    error = errors.New("invalid blockchain JSON")
@@ -296,7 +291,7 @@ func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string,
 	if roleNameFilter != nil {
 		filter := *roleNameFilter
 
-		if !types.ValidRoleNames[filter] {
+		if !filter.IsValid() {
 			return nil, errInvalidRoleNameFilter
 		}
 
@@ -306,24 +301,24 @@ func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string,
 	return get[[]*types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetPendingLoadBalancersByEmail returns all the pending load balancers for an email - GET `<base URL>/<version>/user/{email}/load_balancer/pending`.*/
-func (db *DBClient) GetPendingLoadBalancersByEmail(ctx context.Context, email string) ([]*types.LoadBalancer, error) {
-	if email == "" {
-		return nil, errNoEmail
+// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/pending`.*/
+func (db *DBClient) GetPendingLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error) {
+	if userID == "" {
+		return nil, errNoUserID
 	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(userPath), email, loadBalancerPath, pendingPath)
+	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(userPath), userID, loadBalancerPath, pendingPath)
 
 	return get[[]*types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetLoadBalancersCountByEmail returns all the pending load balancers for an email - GET `<base URL>/<version>/user/{email}/load_balancer/count`.*/
-func (db *DBClient) GetLoadBalancersCountByEmail(ctx context.Context, email string) (int, error) {
-	if email == "" {
-		return 0, errNoEmail
+// GetLoadBalancersCountByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/count`.*/
+func (db *DBClient) GetLoadBalancersCountByUserID(ctx context.Context, userID string) (int, error) {
+	if userID == "" {
+		return 0, errNoUserID
 	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(userPath), email, loadBalancerPath, countPath)
+	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(userPath), userID, loadBalancerPath, countPath)
 
 	return get[int](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
@@ -347,14 +342,14 @@ func (db *DBClient) GetPayPlanByType(ctx context.Context, payPlanType types.PayP
 }
 
 // GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
-func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
+func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.LegacyUserPermissions, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(userPath), userID, permissionPath)
 
-	return get[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	return get[*types.LegacyUserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Create Methods -- */
@@ -381,18 +376,6 @@ func (db *DBClient) CreateBlockchainRedirect(ctx context.Context, redirect types
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), redirectPath)
 
 	return post[*types.Redirect](endpoint, db.getAuthHeaderForWrite(), redirectJSON, db.httpClient)
-}
-
-// CreateApplication creates a single Application in the DB - POST `<base URL>/<version>/application`
-func (db *DBClient) CreateApplication(ctx context.Context, app types.Application) (*types.Application, error) {
-	appJSON, err := json.Marshal(app)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errInvalidAppJSON, err)
-	}
-
-	endpoint := db.versionedBasePath(applicationPath)
-
-	return post[*types.Application](endpoint, db.getAuthHeaderForWrite(), appJSON, db.httpClient)
 }
 
 // CreateLoadBalancer creates a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer`
@@ -447,22 +430,6 @@ func (db *DBClient) ActivateBlockchain(ctx context.Context, blockchainID string,
 	return post[bool](endpoint, db.getAuthHeaderForWrite(), activeJSON, db.httpClient)
 }
 
-// UpdateApplication updates a single Application in the DB - PUT `<base URL>/<version>/application/{id}`
-func (db *DBClient) UpdateApplication(ctx context.Context, id string, appUpdate types.UpdateApplication) (*types.Application, error) {
-	if id == "" {
-		return nil, errNoApplicationID
-	}
-
-	appUpdateJSON, err := json.Marshal(appUpdate)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errInvalidAppJSON, err)
-	}
-
-	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(applicationPath), id)
-
-	return put[*types.Application](endpoint, db.getAuthHeaderForWrite(), appUpdateJSON, db.httpClient)
-}
-
 // UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - POST `<base URL>/<version>/first_date_surpassed`
 func (db *DBClient) UpdateAppFirstDateSurpassed(ctx context.Context, updateInput types.UpdateFirstDateSurpassed) ([]*types.Application, error) {
 	firstDateSurpassedJSON, err := json.Marshal(updateInput)
@@ -492,7 +459,8 @@ func (db *DBClient) UpdateBlockchain(ctx context.Context, blockchainID string, c
 }
 
 // UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
-func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateLoadBalancer) (*types.LoadBalancer, error) {
+// NOTE: It is intended that the UpdateAppliation struct be used here as part of the V2 changes
+func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateApplication) (*types.LoadBalancer, error) {
 	if id == "" {
 		return nil, errNoLoadBalancerID
 	}
@@ -512,23 +480,24 @@ func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancer
 	if loadBalancerID == "" {
 		return nil, errNoLoadBalancerID
 	}
-	if update.Email == "" {
-		return nil, errNoEmail
+	if update.UserID == "" {
+		return nil, errNoUserID
 	}
-	if update.RoleName == types.RoleName("") || !types.ValidRoleNames[update.RoleName] {
+	if update.RoleName == types.RoleName("") || !update.RoleName.IsValid() {
 		return nil, errInvalidRoleName
 	}
-	if update.RoleName == types.RoleOwner && update.UpdaterEmail == "" {
+	if update.RoleName == types.RoleOwner && update.Email == "" {
 		return nil, errOwnerRequiresUpdateEmail
 	}
 
 	updateStruct := types.UpdateUserAccess{
-		Email:    update.Email,
+		UserID:   update.UserID,
 		RoleName: update.RoleName,
+		Email:    update.Email,
 	}
-	if update.RoleName == types.RoleOwner {
+	/* 	if update.RoleName == types.RoleOwner {
 		updateStruct.UpdaterEmail = update.UpdaterEmail
-	}
+	} */
 
 	loadBalancerUserUpdateJSON, err := json.Marshal(updateStruct)
 	if err != nil {
@@ -541,9 +510,9 @@ func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancer
 }
 
 // AcceptLoadBalancerUser updates a single User's UserID and Accepted fields for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/accept`
-func (db *DBClient) AcceptLoadBalancerUser(ctx context.Context, email, loadBalancerID, userID string) (*types.LoadBalancer, error) {
-	if email == "" {
-		return nil, errNoEmail
+func (db *DBClient) AcceptLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error) {
+	if userID == "" {
+		return nil, errNoUserID
 	}
 	if loadBalancerID == "" {
 		return nil, errNoLoadBalancerID
@@ -552,10 +521,7 @@ func (db *DBClient) AcceptLoadBalancerUser(ctx context.Context, email, loadBalan
 		return nil, errNoUserID
 	}
 
-	loadBalancerAcceptUserJSON, err := json.Marshal(types.UpdateUserAccess{
-		UserID: userID,
-		Email:  email,
-	})
+	loadBalancerAcceptUserJSON, err := json.Marshal(types.UpdateUserAccess{UserID: userID})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidLoadBalancerJSON, err)
 	}
@@ -576,7 +542,7 @@ func (db *DBClient) RemoveApplication(ctx context.Context, id string) (*types.Ap
 		return nil, fmt.Errorf("%w: %s", errInvalidAppJSON, err)
 	}
 
-	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(applicationPath), id)
+	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(loadBalancerPath), id)
 
 	return put[*types.Application](endpoint, db.getAuthHeaderForWrite(), appRemoveJSON, db.httpClient)
 }
@@ -599,16 +565,16 @@ func (db *DBClient) RemoveLoadBalancer(ctx context.Context, id string) (*types.L
 
 /* -- Delete Methods -- */
 
-// DeleteLoadBalancerUser deletes a single User from a single Load Balancer by user email - DELETE `<base URL>/<version>/load_balancer/{id}/user/{email}`
-func (db *DBClient) DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, email string) (*types.LoadBalancer, error) {
+// DeleteLoadBalancerUser deletes a single User from a single Load Balancer by user userID - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}`
+func (db *DBClient) DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*types.LoadBalancer, error) {
 	if loadBalancerID == "" {
 		return nil, errNoLoadBalancerID
 	}
-	if email == "" {
-		return nil, errNoEmail
+	if userID == "" {
+		return nil, errNoUserID
 	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath, email)
+	endpoint := fmt.Sprintf("%s/%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath, userID)
 
 	return delete[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), db.httpClient)
 }
