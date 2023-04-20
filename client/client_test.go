@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pokt-foundation/portal-db/types"
+	v2Types "github.com/pokt-foundation/portal-db/v2/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -1589,6 +1590,33 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				ts.Equal(test.loadBalancer.Users, loadBalancer.Users)
 				ts.NotEmpty(loadBalancer.CreatedAt)
 				ts.NotEmpty(loadBalancer.UpdatedAt)
+			}
+		}
+	})
+
+	ts.Run("Test_CreateBUser", func() {
+		tests := []struct {
+			name      string
+			userInput v2Types.CreateUser
+			err       error
+		}{
+			{
+				name: "Should create a single user in the DB",
+				userInput: v2Types.CreateUser{
+					Email:            "test@test.com",
+					AuthProviderType: v2Types.AuthTypeAuth0Github,
+					ProviderUserID:   "auth0_username|test",
+				},
+			},
+		}
+
+		for _, test := range tests {
+			user, err := ts.client.CreatePortalUser(testCtx, test.userInput)
+			ts.Equal(test.err, err)
+			if test.err == nil {
+				user, err := ts.client.GetUserByUserID(testCtx, types.UserID(user.ID))
+				ts.NoError(err)
+				cmp.Equal(user, user)
 			}
 		}
 	})

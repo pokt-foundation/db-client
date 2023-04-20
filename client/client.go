@@ -13,6 +13,7 @@ import (
 	"github.com/gojek/heimdall/v7/httpclient"
 	"github.com/gojektech/heimdall"
 	"github.com/pokt-foundation/portal-db/types"
+	v2Types "github.com/pokt-foundation/portal-db/v2/types"
 )
 
 type (
@@ -55,9 +56,9 @@ type (
 		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`.*/
 		// This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
 		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
-		// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/pending`.*/
+		// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/pending`.*/
 		GetPendingLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error)
-		// GetLoadBalancersCountByUserID returns the number of loadbalancers owned by an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/count`.`
+		// GetLoadBalancersCountByUserID returns the number of loadbalancers owned by an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/count`.`
 		GetLoadBalancersCountByUserID(ctx context.Context, userID string) (int, error)
 		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
@@ -65,6 +66,8 @@ type (
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 		// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
 		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error)
+		// GetUserByUserID returns a single user bases on his User ID - GET `<base URL>/<version>/user/{userID}`
+		GetUserByUserID(ctx context.Context, userID types.UserID) (*v2Types.User, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
@@ -78,6 +81,8 @@ type (
 		CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error)
 		// CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`
 		CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput types.AccountIntegrations) (*types.LoadBalancer, error)
+		// CreatePortalUser creates a single user in the DB - POST `<base URL>/<version>/user`
+		CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.User, error)
 		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
 		// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - POST `<base URL>/<version>/first_date_surpassed`
@@ -139,6 +144,7 @@ var (
 	errNoLoadBalancerID         error = errors.New("no load balancer ID")
 	errNoPayPlanType            error = errors.New("no pay plan type")
 	errInvalidBlockchainJSON    error = errors.New("invalid blockchain JSON")
+	errInvalidCreateUserJSON    error = errors.New("invalid create user JSON")
 	errInvalidAppJSON           error = errors.New("invalid application JSON")
 	errInvalidLoadBalancerJSON  error = errors.New("invalid load balancer JSON")
 	errInvalidIntegrationsJSON  error = errors.New("invalid integrations JSON")
@@ -352,6 +358,17 @@ func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types
 	return get[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
+// GetUserByUserID returns a single user bases on his User ID - GET `<base URL>/<version>/user/{userID}`
+func (db *DBClient) GetUserByUserID(ctx context.Context, userID types.UserID) (*v2Types.User, error) {
+	if userID == "" {
+		return nil, errNoUserID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(userPath), userID)
+
+	return get[*v2Types.User](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
 /* -- Create Methods -- */
 
 // CreateBlockchain creates a single Blockchain in the DB - POST `<base URL>/<version>/blockchain`
@@ -410,6 +427,18 @@ func (db *DBClient) CreateLoadBalancerIntegration(ctx context.Context, loadBalan
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, "integration")
 
 	return post[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), integrationsJSON, db.httpClient)
+}
+
+// CreatePortalUser creates a single user in the DB - POST `<base URL>/<version>/user`
+func (db *DBClient) CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.User, error) {
+	userInputJSON, err := json.Marshal(userInput)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidCreateUserJSON, err)
+	}
+
+	endpoint := db.versionedBasePath(userPath)
+
+	return post[*v2Types.User](endpoint, db.getAuthHeaderForWrite(), userInputJSON, db.httpClient)
 }
 
 /* -- Update Methods -- */
