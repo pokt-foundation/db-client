@@ -1594,11 +1594,13 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 	})
 
-	ts.Run("Test_CreateBUser", func() {
+	ts.Run("Test_CreatePortalUser", func() {
 		tests := []struct {
-			name      string
-			userInput v2Types.CreateUser
-			err       error
+			name             string
+			userInput        v2Types.CreateUser
+			expectedStatus   int
+			expectedResponse v2Types.User
+			err              error
 		}{
 			{
 				name: "Should create a single user in the DB",
@@ -1607,17 +1609,51 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					AuthProviderType: v2Types.AuthTypeAuth0Github,
 					ProviderUserID:   "auth0_username|test",
 				},
+				expectedResponse: v2Types.User{
+					Email: "test@test.com",
+					AuthProviders: map[v2Types.AuthType]v2Types.UserAuthProvider{
+						v2Types.AuthTypeAuth0Github: {
+							Type:           v2Types.AuthTypeAuth0Github,
+							ProviderUserID: "auth0_username|test",
+							Provider:       v2Types.AuthProviderAuth0,
+						},
+					},
+				},
+			},
+			{
+				name: "Should fail if there's no email",
+				userInput: v2Types.CreateUser{
+					AuthProviderType: v2Types.AuthTypeAuth0Github,
+					ProviderUserID:   "auth0_username|test",
+				},
+				err: fmt.Errorf("Response not OK. 404 Not Found: error WriteUserNewSignUp: error email input is not a valid email address ''"),
+			},
+			{
+				name: "Should fail if there's no provider type",
+				userInput: v2Types.CreateUser{
+					Email:          "email@tes.com",
+					ProviderUserID: "auth0_username|test",
+				},
+				err: fmt.Errorf("Response not OK. 404 Not Found: error WriteUserNewSignUp: error invalid auth provider type ''"),
 			},
 		}
 
 		for _, test := range tests {
-			user, err := ts.client.CreatePortalUser(testCtx, test.userInput)
-			ts.Equal(test.err, err)
-			if test.err == nil {
-				user, err := ts.client.GetUsersByUserID(testCtx, types.UserID(user.ID))
-				ts.NoError(err)
-				cmp.Equal(user, user)
-			}
+			ts.Run(test.name, func() {
+				createdUser, err := ts.client.CreatePortalUser(testCtx, test.userInput)
+				ts.Equal(test.err, err)
+				if test.err == nil {
+					test.expectedResponse.UpdatedAt = createdUser.UpdatedAt
+					test.expectedResponse.CreatedAt = createdUser.CreatedAt
+					cmp.Equal(test.expectedResponse, createdUser)
+
+					<-time.After(50 * time.Millisecond)
+					user, err := ts.client.GetUsersByUserID(testCtx, types.UserID(createdUser.ID))
+					ts.Equal(test.err, err)
+					cmp.Equal(test.expectedResponse, user)
+
+				}
+			})
 		}
 	})
 
