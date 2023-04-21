@@ -79,10 +79,10 @@ type (
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
 		// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
 		CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error)
+		// CreatePortalUser adds a single User to the database and create a new account - POST `<base URL>/<version>/user`
+		CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.User, error)
 		// CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`
 		CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput types.AccountIntegrations) (*types.LoadBalancer, error)
-		// CreatePortalUser creates a single user in the DB - POST `<base URL>/<version>/user`
-		CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.User, error)
 		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
 		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
 		// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - POST `<base URL>/<version>/first_date_surpassed`
@@ -144,7 +144,6 @@ var (
 	errNoLoadBalancerID         error = errors.New("no load balancer ID")
 	errNoPayPlanType            error = errors.New("no pay plan type")
 	errInvalidBlockchainJSON    error = errors.New("invalid blockchain JSON")
-	errInvalidCreateUserJSON    error = errors.New("invalid create user JSON")
 	errInvalidAppJSON           error = errors.New("invalid application JSON")
 	errInvalidLoadBalancerJSON  error = errors.New("invalid load balancer JSON")
 	errInvalidIntegrationsJSON  error = errors.New("invalid integrations JSON")
@@ -153,6 +152,7 @@ var (
 	errOwnerRequiresUpdateEmail error = errors.New("transferring ownership requires providing the updater's email")
 	errInvalidRoleNameFilter    error = errors.New("invalid role name filter")
 	errResponseNotOK            error = errors.New("Response not OK")
+	errInvalidCreateUserJSON    error = errors.New("invalid create user JSON")
 )
 
 // NewDBClient returns a read-write HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
@@ -417,6 +417,16 @@ func (db *DBClient) CreateLoadBalancerUser(ctx context.Context, loadBalancerID s
 	return post[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUserJSON, db.httpClient)
 }
 
+// CreatePortalUser adds a single User to the database and create a new account - POST `<base URL>/<version>/user`
+func (db *DBClient) CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.User, error) {
+	portalUserJSON, err := json.Marshal(userInput)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidCreateUserJSON, err)
+	}
+
+	return post[*v2Types.User](db.versionedBasePath(userPath), db.getAuthHeaderForWrite(), portalUserJSON, db.httpClient)
+}
+
 // CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`
 func (db *DBClient) CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput types.AccountIntegrations) (*types.LoadBalancer, error) {
 	integrationsJSON, err := json.Marshal(integrationsInput)
@@ -427,18 +437,6 @@ func (db *DBClient) CreateLoadBalancerIntegration(ctx context.Context, loadBalan
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, "integration")
 
 	return post[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), integrationsJSON, db.httpClient)
-}
-
-// CreatePortalUser creates a single user in the DB - POST `<base URL>/<version>/user`
-func (db *DBClient) CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.User, error) {
-	userInputJSON, err := json.Marshal(userInput)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errInvalidCreateUserJSON, err)
-	}
-
-	endpoint := db.versionedBasePath(userPath)
-
-	return post[*v2Types.User](endpoint, db.getAuthHeaderForWrite(), userInputJSON, db.httpClient)
 }
 
 /* -- Update Methods -- */
