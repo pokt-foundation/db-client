@@ -1614,7 +1614,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			user, err := ts.client.CreatePortalUser(testCtx, test.userInput)
 			ts.Equal(test.err, err)
 			if test.err == nil {
-				user, err := ts.client.GetUserByUserID(testCtx, types.UserID(user.ID))
+				user, err := ts.client.GetUsersByUserID(testCtx, types.UserID(user.ID))
 				ts.NoError(err)
 				cmp.Equal(user, user)
 			}

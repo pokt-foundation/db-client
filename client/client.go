@@ -66,8 +66,8 @@ type (
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 		// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
 		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error)
-		// GetUserByUserID returns a single user bases on his User ID - GET `<base URL>/<version>/user/{userID}`
-		GetUserByUserID(ctx context.Context, userID types.UserID) (*v2Types.User, error)
+		// GetUsersByUserID returns a single user bases on his User ID - GET `<base URL>/<version>/user/{userID}`
+		GetUsersByUserID(ctx context.Context, userID types.UserID) (*[]v2Types.User, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
@@ -358,15 +358,15 @@ func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types
 	return get[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetUserByUserID returns a single user bases on his User ID - GET `<base URL>/<version>/user/{userID}`
-func (db *DBClient) GetUserByUserID(ctx context.Context, userID types.UserID) (*v2Types.User, error) {
+// GetUsersByUserID returns a single user bases on his User ID - GET `<base URL>/<version>/user/{userID}`
+func (db *DBClient) GetUsersByUserID(ctx context.Context, userID types.UserID) (*[]v2Types.User, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(userPath), userID)
 
-	return get[*v2Types.User](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	return get[*[]v2Types.User](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Create Methods -- */
