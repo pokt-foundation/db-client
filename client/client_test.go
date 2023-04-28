@@ -1646,12 +1646,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					test.expectedResponse.UpdatedAt = createdUser.UpdatedAt
 					test.expectedResponse.CreatedAt = createdUser.CreatedAt
 					cmp.Equal(test.expectedResponse, createdUser)
-
-					<-time.After(50 * time.Millisecond)
-					user, err := ts.client.GetUsersByUserID(testCtx, types.UserID(createdUser.ID))
-					ts.Equal(test.err, err)
-					cmp.Equal(test.expectedResponse, user)
-
 				}
 			})
 		}

@@ -66,8 +66,6 @@ type (
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 		// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
 		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error)
-		// GetUsersByUserID returns a single user bases on his User ID - GET `<base URL>/<version>/user/{userID}`
-		GetUsersByUserID(ctx context.Context, userID types.UserID) (*[]v2Types.User, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
