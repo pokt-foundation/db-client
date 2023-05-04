@@ -1644,8 +1644,8 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				if test.err == nil {
 					test.expectedResponse.UpdatedAt = createdUser.User.UpdatedAt
 					test.expectedResponse.CreatedAt = createdUser.User.CreatedAt
-					cmp.Equal(test.expectedResponse, createdUser)
 					ts.NotNil(createdUser.AccountID)
+					cmp.Equal(test.expectedResponse, createdUser)
 				}
 			})
 		}
