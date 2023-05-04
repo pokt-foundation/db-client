@@ -7,6 +7,7 @@ require (
 	github.com/gojektech/heimdall v5.0.2+incompatible
 	github.com/google/go-cmp v0.5.9
 	github.com/pokt-foundation/portal-db v1.10.8
+	github.com/pokt-foundation/portal-db/v2 v2.0.0-beta.54
 	github.com/stretchr/testify v1.8.1
 )
 

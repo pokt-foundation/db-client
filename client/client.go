@@ -13,6 +13,7 @@ import (
 	"github.com/gojek/heimdall/v7/httpclient"
 	"github.com/gojektech/heimdall"
 	"github.com/pokt-foundation/portal-db/types"
+	v2Types "github.com/pokt-foundation/portal-db/v2/types"
 )
 
 type (
@@ -55,9 +56,9 @@ type (
 		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`.*/
 		// This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
 		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error)
-		// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/pending`.*/
+		// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/pending`.*/
 		GetPendingLoadBalancersByUserID(ctx context.Context, userID string) ([]*types.LoadBalancer, error)
-		// GetLoadBalancersCountByUserID returns the number of loadbalancers owned by an userID - GET `<base URL>/<version>/user/{portalID}/load_balancer/count`.`
+		// GetLoadBalancersCountByUserID returns the number of loadbalancers owned by an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/count`.`
 		GetLoadBalancersCountByUserID(ctx context.Context, userID string) (int, error)
 		// GetPayPlans returns all Pay Plans in the DB - GET `<base URL>/<version>/pay_plan`
 		GetPayPlans(ctx context.Context) ([]*types.PayPlan, error)
@@ -76,6 +77,8 @@ type (
 		CreateLoadBalancer(ctx context.Context, loadBalancer types.LoadBalancer) (*types.LoadBalancer, error)
 		// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
 		CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error)
+		// CreatePortalUser adds a single User to the database and create a new account - POST `<base URL>/<version>/user`
+		CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.CreateUserResponse, error)
 		// CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`
 		CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput types.AccountIntegrations) (*types.LoadBalancer, error)
 		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
@@ -147,6 +150,7 @@ var (
 	errOwnerRequiresUpdateEmail error = errors.New("transferring ownership requires providing the updater's email")
 	errInvalidRoleNameFilter    error = errors.New("invalid role name filter")
 	errResponseNotOK            error = errors.New("Response not OK")
+	errInvalidCreateUserJSON    error = errors.New("invalid create user JSON")
 )
 
 // NewDBClient returns a read-write HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
@@ -398,6 +402,16 @@ func (db *DBClient) CreateLoadBalancerUser(ctx context.Context, loadBalancerID s
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), loadBalancerID, userPath)
 
 	return post[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUserJSON, db.httpClient)
+}
+
+// CreatePortalUser adds a single User to the database and create a new account. Returns the new user ID - POST `<base URL>/<version>/user`
+func (db *DBClient) CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.CreateUserResponse, error) {
+	portalUserJSON, err := json.Marshal(userInput)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidCreateUserJSON, err)
+	}
+
+	return post[*v2Types.CreateUserResponse](db.versionedBasePath(userPath), db.getAuthHeaderForWrite(), portalUserJSON, db.httpClient)
 }
 
 // CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`

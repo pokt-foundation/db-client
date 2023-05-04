@@ -6,14 +6,18 @@ services:
     # # 1. Set to Master once PHD E2E test updated to include latest DB client version changes
     # build: github.com/pokt-foundation/pocket-http-db.git#master
     # # 2. Set to <BRANCH NAME> when incorporating latest changes to PHD client from a PHD feature branch
-    build: github.com/pokt-foundation/pocket-http-db.git#v2-staging
+    build: github.com/pokt-foundation/pocket-http-db.git#create-user-endpoint
     container_name: pocket-http-db
     restart: always
     ports:
       - 8080:8080
     environment:
-      CONNECTION_STRING: postgres://postgres:pgpassword@portal-db:5432/postgres?sslmode=disable # pragma: allowlist secret
-      API_KEYS: test_api_key_6789
+      API_KEYS: test_api_key_6789 # pragma: allowlist secret
+      PG_HOST: portal-db # pragma: allowlist secret
+      PG_PORT: 5432 # pragma: allowlist secret
+      PG_USER: postgres # pragma: allowlist secret
+      PG_PASSWORD: pgpassword # pragma: allowlist secret
+      PG_DATABASE: postgres # pragma: allowlist secret
     depends_on:
       portal-db:
         condition: service_healthy

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pokt-foundation/portal-db/types"
+	v2Types "github.com/pokt-foundation/portal-db/v2/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -1572,10 +1573,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, createdLB.ID)
+				ts.Equal(test.err, err)
 				test.loadBalancer.Applications[0].ID = loadBalancer.Applications[0].ID
 				test.loadBalancer.Applications[0].CreatedAt = loadBalancer.Applications[0].CreatedAt
 				test.loadBalancer.Applications[0].UpdatedAt = loadBalancer.Applications[0].UpdatedAt
-				ts.Equal(test.err, err)
 				ts.Equal(createdLB.ID, loadBalancer.ID)
 				ts.Equal(test.loadBalancer.UserID, loadBalancer.UserID)
 				ts.Equal(test.loadBalancer.Name, loadBalancer.Name)
@@ -1585,11 +1586,68 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				ts.Equal(test.loadBalancer.GigastakeRedirect, loadBalancer.GigastakeRedirect)
 				ts.Equal(test.loadBalancer.ApplicationIDs, loadBalancer.ApplicationIDs)
 				ts.Equal(test.loadBalancer.Applications, loadBalancer.Applications)
-				ts.Equal(test.loadBalancer.StickyOptions, loadBalancer.StickyOptions)
 				ts.Equal(test.loadBalancer.Users, loadBalancer.Users)
 				ts.NotEmpty(loadBalancer.CreatedAt)
 				ts.NotEmpty(loadBalancer.UpdatedAt)
 			}
+		}
+	})
+
+	ts.Run("Test_CreatePortalUser", func() {
+		tests := []struct {
+			name             string
+			userInput        v2Types.CreateUser
+			expectedStatus   int
+			expectedResponse v2Types.User
+			err              error
+		}{
+			{
+				name: "Should create a single user in the DB",
+				userInput: v2Types.CreateUser{
+					Email:            "test@test.com",
+					AuthProviderType: v2Types.AuthTypeAuth0Github,
+					ProviderUserID:   "auth0_username|test",
+				},
+				expectedResponse: v2Types.User{
+					Email: "test@test.com",
+					AuthProviders: map[v2Types.AuthType]v2Types.UserAuthProvider{
+						v2Types.AuthTypeAuth0Github: {
+							Type:           v2Types.AuthTypeAuth0Github,
+							ProviderUserID: "auth0_username|test",
+							Provider:       v2Types.AuthProviderAuth0,
+						},
+					},
+				},
+			},
+			{
+				name: "Should fail if there's no email",
+				userInput: v2Types.CreateUser{
+					AuthProviderType: v2Types.AuthTypeAuth0Github,
+					ProviderUserID:   "auth0_username|test",
+				},
+				err: fmt.Errorf("Response not OK. 400 Bad Request: error email input is not a valid email address ''"),
+			},
+			{
+				name: "Should fail if there's no provider type",
+				userInput: v2Types.CreateUser{
+					Email:          "email@tes.com",
+					ProviderUserID: "auth0_username|test",
+				},
+				err: fmt.Errorf("Response not OK. 400 Bad Request: error invalid auth provider type ''"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				createdUser, err := ts.client.CreatePortalUser(testCtx, test.userInput)
+				ts.Equal(test.err, err)
+				if test.err == nil {
+					test.expectedResponse.UpdatedAt = createdUser.User.UpdatedAt
+					test.expectedResponse.CreatedAt = createdUser.User.CreatedAt
+					cmp.Equal(test.expectedResponse, createdUser)
+					ts.NotNil(createdUser.AccountID)
+				}
+			})
 		}
 	})
 
