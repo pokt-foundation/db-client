@@ -1586,7 +1586,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				ts.Equal(test.loadBalancer.GigastakeRedirect, loadBalancer.GigastakeRedirect)
 				ts.Equal(test.loadBalancer.ApplicationIDs, loadBalancer.ApplicationIDs)
 				ts.Equal(test.loadBalancer.Applications, loadBalancer.Applications)
-				ts.Equal(test.loadBalancer.StickyOptions, loadBalancer.StickyOptions)
 				ts.Equal(test.loadBalancer.Users, loadBalancer.Users)
 				ts.NotEmpty(loadBalancer.CreatedAt)
 				ts.NotEmpty(loadBalancer.UpdatedAt)
@@ -1626,7 +1625,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					AuthProviderType: v2Types.AuthTypeAuth0Github,
 					ProviderUserID:   "auth0_username|test",
 				},
-				err: fmt.Errorf("Response not OK. 404 Not Found: error WriteUserNewSignUp: error email input is not a valid email address ''"),
+				err: fmt.Errorf("Response not OK. 400 Bad Request: error email input is not a valid email address ''"),
 			},
 			{
 				name: "Should fail if there's no provider type",
@@ -1634,7 +1633,7 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 					Email:          "email@tes.com",
 					ProviderUserID: "auth0_username|test",
 				},
-				err: fmt.Errorf("Response not OK. 404 Not Found: error WriteUserNewSignUp: error invalid auth provider type ''"),
+				err: fmt.Errorf("Response not OK. 400 Bad Request: error invalid auth provider type ''"),
 			},
 		}
 

@@ -12,8 +12,12 @@ services:
     ports:
       - 8080:8080
     environment:
-      CONNECTION_STRING: postgres://postgres:pgpassword@portal-db:5432/postgres?sslmode=disable # pragma: allowlist secret
-      API_KEYS: test_api_key_6789
+      API_KEYS: test_api_key_6789 # pragma: allowlist secret
+      PG_HOST: portal-db # pragma: allowlist secret
+      PG_PORT: 5432 # pragma: allowlist secret
+      PG_USER: postgres # pragma: allowlist secret
+      PG_PASSWORD: pgpassword # pragma: allowlist secret
+      PG_DATABASE: postgres # pragma: allowlist secret
     depends_on:
       portal-db:
         condition: service_healthy
