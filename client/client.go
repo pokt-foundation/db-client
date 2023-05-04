@@ -78,7 +78,7 @@ type (
 		// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
 		CreateLoadBalancerUser(ctx context.Context, loadBalancerID string, user types.UserAccess) (*types.LoadBalancer, error)
 		// CreatePortalUser adds a single User to the database and create a new account - POST `<base URL>/<version>/user`
-		CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.User, error)
+		CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.CreateUserResponse, error)
 		// CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`
 		CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput types.AccountIntegrations) (*types.LoadBalancer, error)
 		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
@@ -356,17 +356,6 @@ func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types
 	return get[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetUsersByUserID returns a single user bases on his User ID - GET `<base URL>/<version>/user/{userID}`
-func (db *DBClient) GetUsersByUserID(ctx context.Context, userID types.UserID) (*[]v2Types.User, error) {
-	if userID == "" {
-		return nil, errNoUserID
-	}
-
-	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(userPath), userID)
-
-	return get[*[]v2Types.User](endpoint, db.getAuthHeaderForRead(), db.httpClient)
-}
-
 /* -- Create Methods -- */
 
 // CreateBlockchain creates a single Blockchain in the DB - POST `<base URL>/<version>/blockchain`
@@ -415,14 +404,14 @@ func (db *DBClient) CreateLoadBalancerUser(ctx context.Context, loadBalancerID s
 	return post[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUserJSON, db.httpClient)
 }
 
-// CreatePortalUser adds a single User to the database and create a new account - POST `<base URL>/<version>/user`
-func (db *DBClient) CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.User, error) {
+// CreatePortalUser adds a single User to the database and create a new account. Returns the new user ID - POST `<base URL>/<version>/user`
+func (db *DBClient) CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.CreateUserResponse, error) {
 	portalUserJSON, err := json.Marshal(userInput)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidCreateUserJSON, err)
 	}
 
-	return post[*v2Types.User](db.versionedBasePath(userPath), db.getAuthHeaderForWrite(), portalUserJSON, db.httpClient)
+	return post[*v2Types.CreateUserResponse](db.versionedBasePath(userPath), db.getAuthHeaderForWrite(), portalUserJSON, db.httpClient)
 }
 
 // CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`

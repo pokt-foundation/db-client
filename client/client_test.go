@@ -1573,10 +1573,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			ts.Equal(test.err, err)
 			if test.err == nil {
 				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, createdLB.ID)
+				ts.Equal(test.err, err)
 				test.loadBalancer.Applications[0].ID = loadBalancer.Applications[0].ID
 				test.loadBalancer.Applications[0].CreatedAt = loadBalancer.Applications[0].CreatedAt
 				test.loadBalancer.Applications[0].UpdatedAt = loadBalancer.Applications[0].UpdatedAt
-				ts.Equal(test.err, err)
 				ts.Equal(createdLB.ID, loadBalancer.ID)
 				ts.Equal(test.loadBalancer.UserID, loadBalancer.UserID)
 				ts.Equal(test.loadBalancer.Name, loadBalancer.Name)
@@ -1643,9 +1643,10 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				createdUser, err := ts.client.CreatePortalUser(testCtx, test.userInput)
 				ts.Equal(test.err, err)
 				if test.err == nil {
-					test.expectedResponse.UpdatedAt = createdUser.UpdatedAt
-					test.expectedResponse.CreatedAt = createdUser.CreatedAt
+					test.expectedResponse.UpdatedAt = createdUser.User.UpdatedAt
+					test.expectedResponse.CreatedAt = createdUser.User.CreatedAt
 					cmp.Equal(test.expectedResponse, createdUser)
+					ts.NotNil(createdUser.AccountID)
 				}
 			})
 		}
