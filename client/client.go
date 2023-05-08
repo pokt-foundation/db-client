@@ -91,6 +91,8 @@ type (
 		UpdateBlockchain(ctx context.Context, blockchainID string, chainUpdate types.UpdateBlockchain) (*types.Blockchain, error)
 		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate types.UpdateApplication) (*types.LoadBalancer, error)
+		// UpdateLoadBalancerPlan updates a single LoadBalancers pay plan in the DB - PUT `<base URL>/<version>/load_balancer/{id}/plan`
+		UpdateLoadBalancerPlan(ctx context.Context, id string, payPlan types.PayPlanType) (*types.LoadBalancer, error)
 		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
 		UpdateLoadBalancerUserRole(ctx context.Context, loadBalancerID string, update types.UpdateUserAccess) (*types.LoadBalancer, error)
 		// AcceptLoadBalancerUser updates a single User's UserID and Accepted fields for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user/accept`
@@ -120,6 +122,7 @@ const (
 	acceptPath             subPath = "accept"
 	pendingPath            subPath = "pending"
 	countPath              subPath = "count"
+	planPath               subPath = "plan"
 )
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
@@ -485,6 +488,22 @@ func (db *DBClient) UpdateLoadBalancer(ctx context.Context, id string, lbUpdate 
 	}
 
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(loadBalancerPath), id)
+
+	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUpdateJSON, db.httpClient)
+}
+
+// UpdateLoadBalancerPlan updates a single LoadBalancers pay plan in the DB - PUT `<base URL>/<version>/load_balancer/{id}/plan`
+func (db *DBClient) UpdateLoadBalancerPlan(ctx context.Context, id string, payPlan types.PayPlanType) (*types.LoadBalancer, error) {
+	if id == "" {
+		return nil, errNoLoadBalancerID
+	}
+
+	loadBalancerUpdateJSON, err := json.Marshal(payPlan)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidLoadBalancerJSON, err)
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(loadBalancerPath), id, planPath)
 
 	return put[*types.LoadBalancer](endpoint, db.getAuthHeaderForWrite(), loadBalancerUpdateJSON, db.httpClient)
 }
