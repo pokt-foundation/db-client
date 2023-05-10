@@ -132,25 +132,24 @@ var ValidAPIVersions = map[APIVersion]bool{
 }
 
 var (
-	errBaseURLNotProvided       error = errors.New("base URL not provided")
-	errAPIKeyNotProvided        error = errors.New("API key not provided")
-	errVersionNotProvided       error = errors.New("version not provided")
-	errInvalidVersionProvided   error = errors.New("invalid version provided")
-	errNoUserID                 error = errors.New("no user ID")
-	errNoBlockchainID           error = errors.New("no blockchain ID")
-	errNoApplicationID          error = errors.New("no application ID")
-	errNoLoadBalancerID         error = errors.New("no load balancer ID")
-	errNoPayPlanType            error = errors.New("no pay plan type")
-	errInvalidBlockchainJSON    error = errors.New("invalid blockchain JSON")
-	errInvalidAppJSON           error = errors.New("invalid application JSON")
-	errInvalidLoadBalancerJSON  error = errors.New("invalid load balancer JSON")
-	errInvalidIntegrationsJSON  error = errors.New("invalid integrations JSON")
-	errInvalidActivationJSON    error = errors.New("invalid active field JSON")
-	errInvalidRoleName          error = errors.New("invalid role name")
-	errOwnerRequiresUpdateEmail error = errors.New("transferring ownership requires providing the updater's email")
-	errInvalidRoleNameFilter    error = errors.New("invalid role name filter")
-	errResponseNotOK            error = errors.New("Response not OK")
-	errInvalidCreateUserJSON    error = errors.New("invalid create user JSON")
+	errBaseURLNotProvided      error = errors.New("base URL not provided")
+	errAPIKeyNotProvided       error = errors.New("API key not provided")
+	errVersionNotProvided      error = errors.New("version not provided")
+	errInvalidVersionProvided  error = errors.New("invalid version provided")
+	errNoUserID                error = errors.New("no user ID")
+	errNoBlockchainID          error = errors.New("no blockchain ID")
+	errNoApplicationID         error = errors.New("no application ID")
+	errNoLoadBalancerID        error = errors.New("no load balancer ID")
+	errNoPayPlanType           error = errors.New("no pay plan type")
+	errInvalidBlockchainJSON   error = errors.New("invalid blockchain JSON")
+	errInvalidAppJSON          error = errors.New("invalid application JSON")
+	errInvalidLoadBalancerJSON error = errors.New("invalid load balancer JSON")
+	errInvalidIntegrationsJSON error = errors.New("invalid integrations JSON")
+	errInvalidActivationJSON   error = errors.New("invalid active field JSON")
+	errInvalidRoleName         error = errors.New("invalid role name")
+	errInvalidRoleNameFilter   error = errors.New("invalid role name filter")
+	errResponseNotOK           error = errors.New("Response not OK")
+	errInvalidCreateUserJSON   error = errors.New("invalid create user JSON")
 )
 
 // NewDBClient returns a read-write HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
@@ -500,18 +499,10 @@ func (db *DBClient) UpdateLoadBalancerUserRole(ctx context.Context, loadBalancer
 	if update.RoleName == types.RoleName("") || !types.ValidRoleNames[update.RoleName] {
 		return nil, errInvalidRoleName
 	}
-	if update.RoleName == types.RoleOwner && update.Email == "" {
-		return nil, errOwnerRequiresUpdateEmail
-	}
-
 	updateStruct := types.UpdateUserAccess{
 		UserID:   update.UserID,
 		RoleName: update.RoleName,
-		Email:    update.Email,
 	}
-	/* 	if update.RoleName == types.RoleOwner {
-		updateStruct.UpdaterEmail = update.UpdaterEmail
-	} */
 
 	loadBalancerUserUpdateJSON, err := json.Marshal(updateStruct)
 	if err != nil {

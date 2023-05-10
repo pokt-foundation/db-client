@@ -2008,15 +2008,6 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				},
 			},
 			{
-				name:           "Should fail if attempting to transfer ownership and the UpdaterEmail is not provided",
-				loadBalancerID: "test_app_1",
-				update: types.UpdateUserAccess{
-					UserID:   "user_2",
-					RoleName: types.RoleOwner,
-				},
-				err: errOwnerRequiresUpdateEmail,
-			},
-			{
 				name:           "Should fail if attempting to transfer ownership and the user has not accepted their invite",
 				loadBalancerID: "test_app_1",
 				update: types.UpdateUserAccess{
