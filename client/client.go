@@ -66,6 +66,8 @@ type (
 		GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error)
 		// GetUserPermissionsByUserID returns all load balancer UserPermissions for a given User ID - GET `<base URL>/<version>/user/{userID}/permission`
 		GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error)
+		// GetPortalUserID returns the Portal User ID for a given provider user ID - GET `<base URL>/<version>/user/{id}/portal_id`
+		GetPortalUserID(ctx context.Context, providerUserID string) (types.UserID, error)
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
@@ -120,6 +122,7 @@ const (
 	acceptPath             subPath = "accept"
 	pendingPath            subPath = "pending"
 	countPath              subPath = "count"
+	portalIDPath           subPath = "portal_id"
 )
 
 // New API versions should be added to both the APIVersion enum and ValidAPIVersions map
@@ -353,6 +356,17 @@ func (db *DBClient) GetUserPermissionsByUserID(ctx context.Context, userID types
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(userPath), userID, permissionPath)
 
 	return get[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetPortalUserID returns the Portal User ID for a given provider user ID - GET `<base URL>/<version>/user/{id}/portal_id`
+func (db *DBClient) GetPortalUserID(ctx context.Context, providerUserID string) (types.UserID, error) {
+	if providerUserID == "" {
+		return types.UserID(""), errNoUserID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(userPath), providerUserID, portalIDPath)
+
+	return get[types.UserID](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Create Methods -- */

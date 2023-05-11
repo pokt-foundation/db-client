@@ -1228,6 +1228,7 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			ts.Equal(test.expectedPayPlan, payPlanByType)
 		}
 	})
+
 	ts.Run("Test_GetUserPermissionsByUserID", func() {
 		tests := []struct {
 			name                string
@@ -1282,6 +1283,28 @@ func (ts *DBClientTestSuite) Test_ReadTests() {
 			permissionsByUserID, err := ts.client.GetUserPermissionsByUserID(testCtx, test.userID)
 			ts.Equal(test.err, err)
 			ts.Equal(test.expectedPermissions, permissionsByUserID)
+		}
+	})
+
+	ts.Run("Test_GetPortalUserID", func() {
+		tests := []struct {
+			name           string
+			providerUserID string
+			portalUserID   types.UserID
+			err            error
+		}{
+			{
+
+				name:           "Should fetch a single users portal user ID",
+				providerUserID: "auth0|james_holden",
+				portalUserID:   "user_1",
+			},
+		}
+
+		for _, test := range tests {
+			portalUserID, err := ts.client.GetPortalUserID(testCtx, test.providerUserID)
+			ts.Equal(test.err, err)
+			ts.Equal(test.portalUserID, portalUserID)
 		}
 	})
 }
