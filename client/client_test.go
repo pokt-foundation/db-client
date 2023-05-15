@@ -1621,23 +1621,24 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			name             string
 			userInput        v2Types.CreateUser
 			expectedStatus   int
-			expectedResponse v2Types.User
+			expectedResponse *v2Types.CreateUserResponse
 			err              error
 		}{
 			{
 				name: "Should create a single user in the DB",
 				userInput: v2Types.CreateUser{
-					Email:            "test@test.com",
-					AuthProviderType: v2Types.AuthTypeAuth0Github,
-					ProviderUserID:   "auth0_username|test",
+					Email:          "test@test.com",
+					ProviderUserID: "auth0|test",
 				},
-				expectedResponse: v2Types.User{
-					Email: "test@test.com",
-					AuthProviders: map[v2Types.AuthType]v2Types.UserAuthProvider{
-						v2Types.AuthTypeAuth0Github: {
-							Type:           v2Types.AuthTypeAuth0Github,
-							ProviderUserID: "auth0_username|test",
-							Provider:       v2Types.AuthProviderAuth0,
+				expectedResponse: &v2Types.CreateUserResponse{
+					User: v2Types.User{
+						Email: "test@test.com",
+						AuthProviders: map[v2Types.AuthType]v2Types.UserAuthProvider{
+							v2Types.AuthTypeAuth0Github: {
+								Type:           v2Types.AuthTypeAuth0Github,
+								ProviderUserID: "auth0|test",
+								Provider:       v2Types.AuthProviderAuth0,
+							},
 						},
 					},
 				},
@@ -1645,30 +1646,30 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 			{
 				name: "Should fail if there's no email",
 				userInput: v2Types.CreateUser{
-					AuthProviderType: v2Types.AuthTypeAuth0Github,
-					ProviderUserID:   "auth0_username|test",
+					ProviderUserID: "auth0|test",
 				},
 				err: fmt.Errorf("Response not OK. 400 Bad Request: error email input is not a valid email address ''"),
 			},
 			{
-				name: "Should fail if there's no provider type",
+				name: "Should fail if there's an invalid provider type",
 				userInput: v2Types.CreateUser{
-					Email:          "email@tes.com",
-					ProviderUserID: "auth0_username|test",
+					Email:          "email@test.com",
+					ProviderUserID: "wtf|test",
 				},
-				err: fmt.Errorf("Response not OK. 400 Bad Request: error invalid auth provider type ''"),
+				err: fmt.Errorf("Response not OK. 400 Bad Request: error invalid auth provider type 'wtf'"),
 			},
 		}
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				createdUser, err := ts.client.CreatePortalUser(testCtx, test.userInput)
+				createdUserResponse, err := ts.client.CreatePortalUser(testCtx, test.userInput)
 				ts.Equal(test.err, err)
+
 				if test.err == nil {
-					test.expectedResponse.UpdatedAt = createdUser.User.UpdatedAt
-					test.expectedResponse.CreatedAt = createdUser.User.CreatedAt
-					ts.NotNil(createdUser.AccountID)
-					cmp.Equal(test.expectedResponse, createdUser)
+					test.expectedResponse.User.UpdatedAt = createdUserResponse.User.UpdatedAt
+					test.expectedResponse.User.CreatedAt = createdUserResponse.User.CreatedAt
+					ts.NotNil(createdUserResponse.AccountID)
+					cmp.Equal(test.expectedResponse, createdUserResponse)
 				}
 			})
 		}
@@ -2080,15 +2081,15 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 
 	ts.Run("Test_AcceptLoadBalancerUser", func() {
 		tests := []struct {
-			name                   string
-			loadBalancerID, userID string
-			loadBalancerUsers      []types.UserAccess
-			err                    error
+			name                           string
+			loadBalancerID, providerUserID string
+			loadBalancerUsers              []types.UserAccess
+			err                            error
 		}{
 			{
 				name:           "Should update a single user's ID and Accepted field for an existing load balancer in the DB",
 				loadBalancerID: "test_app_1",
-				userID:         "user_8",
+				providerUserID: "auth0|rick_deckard",
 				loadBalancerUsers: []types.UserAccess{
 					{RoleName: types.RoleOwner, UserID: "user_1", Email: "", Accepted: true},
 					{RoleName: types.RoleAdmin, UserID: "user_2", Email: "", Accepted: true},
@@ -2096,33 +2097,97 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 				},
 			},
 			{
-				name:           "Should fail if load balancer ID not provided",
-				loadBalancerID: "",
-				userID:         "user_8",
-				err:            errNoLoadBalancerID,
-			},
-			{
 				name:           "Should fail if user ID not provided",
 				loadBalancerID: "test_app_1",
-				userID:         "",
+				providerUserID: "",
 				err:            errNoUserID,
 			},
 			{
+				name:           "Should fail if load balancer ID not provided",
+				loadBalancerID: "",
+				providerUserID: "auth0|rick_deckard",
+				err:            errNoLoadBalancerID,
+			},
+			{
+				name:           "Should fail if user cannot be found",
+				loadBalancerID: "test_app_1",
+				providerUserID: "auth0|rick_sanchez",
+				err:            fmt.Errorf("Response not OK. 500 Internal Server Error: user not found for provider user ID auth0|rick_sanchez"),
+			},
+			{
 				name:           "Should fail if load balancer cannot be found",
+				providerUserID: "auth0|rick_deckard",
 				loadBalancerID: "im_not_here",
-				userID:         "test_user_accept_member",
 				err:            fmt.Errorf("Response not OK. 500 Internal Server Error: portal app not found for load balancer ID im_not_here"),
 			},
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.AcceptLoadBalancerUser(testCtx, test.loadBalancerID, test.userID)
-			ts.Equal(test.err, err)
-			if test.err == nil {
-				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+			ts.Run(test.name, func() {
+				_, err := ts.client.AcceptLoadBalancerUser(testCtx, test.loadBalancerID, test.providerUserID)
 				ts.Equal(test.err, err)
-				cmp.Equal(test.loadBalancerUsers, loadBalancer.Users)
-			}
+				if test.err == nil {
+					loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+					ts.Equal(test.err, err)
+					cmp.Equal(test.loadBalancerUsers, loadBalancer.Users)
+				}
+			})
+		}
+	})
+
+	ts.Run("Test_CreateLoadBalancerIntegration", func() {
+		tests := []struct {
+			name                 string
+			loadBalancerID       string
+			integrationsInput    types.AccountIntegrations
+			expectedIntegrations types.AccountIntegrations
+			err                  error
+		}{
+			{
+				name:           "Should add new account integrations to a load balancer in the DB",
+				loadBalancerID: "test_app_2",
+				integrationsInput: types.AccountIntegrations{
+					AccountID:          "account_2",
+					CovalentAPIKeyFree: "free_api_key_123",
+					CovalentAPIKeyPaid: "paid_api_key_123",
+				},
+				expectedIntegrations: types.AccountIntegrations{
+					CovalentAPIKeyFree: "free_api_key_123",
+					CovalentAPIKeyPaid: "paid_api_key_123",
+				},
+			},
+			{
+				name:           "Should update existing account integrations for a load balancer in the DB",
+				loadBalancerID: "test_app_1",
+				integrationsInput: types.AccountIntegrations{
+					AccountID:          "account_1",
+					CovalentAPIKeyFree: "free_api_key_456",
+					CovalentAPIKeyPaid: "paid_api_key_456",
+				},
+				expectedIntegrations: types.AccountIntegrations{
+					CovalentAPIKeyFree: "free_api_key_456",
+					CovalentAPIKeyPaid: "paid_api_key_456",
+				},
+			},
+			{
+				name:           "Should fail if load balancer cannot be found",
+				loadBalancerID: "sir_not_appearing_in_this_film",
+				err:            fmt.Errorf("Response not OK. 500 Internal Server Error: portal app not found for load balancer ID sir_not_appearing_in_this_film"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				updatedLB, err := ts.client.CreateLoadBalancerIntegration(testCtx, test.loadBalancerID, test.integrationsInput)
+				ts.Equal(test.err, err)
+				if test.err == nil {
+					ts.Equal(test.expectedIntegrations, updatedLB.Integrations)
+
+					loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+					ts.Equal(test.err, err)
+					ts.Equal(test.expectedIntegrations, loadBalancer.Integrations)
+				}
+			})
 		}
 	})
 
@@ -2145,13 +2210,15 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.RemoveLoadBalancer(testCtx, test.loadBalancerID)
-			ts.Equal(test.err, err)
-			if test.err == nil {
-				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
-				ts.Equal("Response not OK. 404 Not Found: portal app not found for load balancer ID test_app_2", err.Error())
-				ts.Nil(loadBalancer)
-			}
+			ts.Run(test.name, func() {
+				_, err := ts.client.RemoveLoadBalancer(testCtx, test.loadBalancerID)
+				ts.Equal(test.err, err)
+				if test.err == nil {
+					loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+					ts.Equal("Response not OK. 404 Not Found: portal app not found for load balancer ID test_app_2", err.Error())
+					ts.Nil(loadBalancer)
+				}
+			})
 		}
 	})
 
@@ -2192,69 +2259,15 @@ func (ts *DBClientTestSuite) Test_WriteTests() {
 		}
 
 		for _, test := range tests {
-			_, err := ts.client.DeleteLoadBalancerUser(testCtx, test.loadBalancerID, test.userID)
-			ts.Equal(test.err, err)
-			if test.err == nil {
-				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+			ts.Run(test.name, func() {
+				_, err := ts.client.DeleteLoadBalancerUser(testCtx, test.loadBalancerID, test.userID)
 				ts.Equal(test.err, err)
-				cmp.Equal(test.loadBalancerUsers, loadBalancer.Users)
-			}
+				if test.err == nil {
+					loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
+					ts.Equal(test.err, err)
+					cmp.Equal(test.loadBalancerUsers, loadBalancer.Users)
+				}
+			})
 		}
 	})
-	/* TODO: verify if this method is actually removed
-	 ts.Run("Test_CreateLoadBalancerIntegration", func() {
-		tests := []struct {
-			name                 string
-			loadBalancerID       string
-			integrationsInput    types.AccountIntegrations
-			expectedIntegrations types.AccountIntegrations
-			err                  error
-		}{
-			{
-				name:           "Should add new account integrations to a load balancer in the DB",
-				loadBalancerID: "test_app_2",
-				integrationsInput: types.AccountIntegrations{
-					AccountID:          "account3",
-					CovalentAPIKeyFree: "free_api_key_123",
-					CovalentAPIKeyPaid: "paid_api_key_123",
-				},
-				expectedIntegrations: types.AccountIntegrations{
-					AccountID:          "account3",
-					CovalentAPIKeyFree: "free_api_key_123",
-					CovalentAPIKeyPaid: "paid_api_key_123",
-				},
-			},
-			{
-				name:           "Should update existing account integrations for a load balancer in the DB",
-				loadBalancerID: "test_app_1",
-				integrationsInput: types.AccountIntegrations{
-					AccountID:          "account1",
-					CovalentAPIKeyFree: "free_api_key_456",
-					CovalentAPIKeyPaid: "paid_api_key_456",
-				},
-				expectedIntegrations: types.AccountIntegrations{
-					AccountID:          "account1",
-					CovalentAPIKeyFree: "free_api_key_456",
-					CovalentAPIKeyPaid: "paid_api_key_456",
-				},
-			},
-			{
-				name:           "Should fail if load balancer cannot be found",
-				loadBalancerID: "sir_not_appearing_in_this_film",
-				err:            fmt.Errorf("Response not OK. 500 Internal Server Error: portal app not found for load balancer ID sir_not_appearing_in_this_film"),
-			},
-		}
-
-		for _, test := range tests {
-			updatedLB, err := ts.client.CreateLoadBalancerIntegration(testCtx, test.loadBalancerID, test.integrationsInput)
-			ts.Equal(test.err, err)
-			if test.err == nil {
-				ts.Equal(test.expectedIntegrations, updatedLB.Integrations)
-
-				loadBalancer, err := ts.client.GetLoadBalancerByID(testCtx, test.loadBalancerID)
-				ts.Equal(test.err, err)
-				ts.Equal(test.expectedIntegrations, loadBalancer.Integrations)
-			}
-		}
-	}) */
 }
