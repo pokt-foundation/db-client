@@ -41,6 +41,9 @@ type (
 	}
 	// IDBReader interface contains read-only methods for interacting with the Pocket HTTP DB
 	IDBReader interface {
+		// GetChainByID returns a single Chain by its relay chain ID - GET `<base URL>/v2/chain/{id}`
+		GetChainByID(ctx context.Context, chainID v2Types.RelayChainID) (*v2Types.Chain, error)
+
 		// GetBlockchains returns all blockchains in the DB - GET `<base URL>/<version>/blockchain`
 		GetBlockchains(ctx context.Context) ([]*v1Types.Blockchain, error)
 		// GetBlockchainByID returns a single Blockchain by its relay chain ID - GET `<base URL>/<version>/blockchain/{id}`
@@ -71,10 +74,15 @@ type (
 	}
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
 	IDBWriter interface {
-		// CreateBlockchain creates a single Blockchain in the DB - POST `<base URL>/<version>/blockchain`
-		CreateBlockchain(ctx context.Context, blockchain v1Types.Blockchain) (*v1Types.Blockchain, error)
-		// CreateBlockchainRedirect creates a single Blockchain Redirect in the DB - POST `<base URL>/<version>/blockchain/redirect`
-		CreateBlockchainRedirect(ctx context.Context, redirect v1Types.Redirect) (*v1Types.Redirect, error)
+		// CreateChainAndGigastakeApps creates a new blockchain and its Gigastake apps in the DB - POST `/v2/chain`
+		CreateChainAndGigastakeApps(ctx context.Context, newChainInput v2Types.NewChainInput) (*v2Types.NewChainInput, error)
+		// CreateGigastakeApp creates a new Gigastake app in the DB - POST `/v2/chain/gigastake`
+		CreateGigastakeApp(ctx context.Context, gigastakeAppInput v2Types.GigastakeApp) (*v2Types.GigastakeApp, error)
+		// UpdateChain updates an existing blockchain in the DB - PUT `/v2/chain/{id}`
+		UpdateChain(ctx context.Context, chainUpdate v2Types.Chain) (*v2Types.Chain, error)
+		// ActivateChain activates or deactivates a blockchain by ID in the DB - PUT `/v2/chain/{id}/activate`
+		ActivateChain(ctx context.Context, chainID v2Types.RelayChainID, active bool) (bool, error)
+
 		// CreateLoadBalancer creates a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer`
 		CreateLoadBalancer(ctx context.Context, loadBalancer v1Types.LoadBalancer) (*v1Types.LoadBalancer, error)
 		// CreateLoadBalancerUser adds a single User to a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer/{id}/user`
@@ -83,14 +91,10 @@ type (
 		CreatePortalUser(ctx context.Context, userInput v2Types.CreateUser) (*v2Types.CreateUserResponse, error)
 		// CreateLoadBalancerIntegration adds account integrations to a single Load Balancer - POST `<base URL>/<version>/load_balancer/{id}/integration`
 		CreateLoadBalancerIntegration(ctx context.Context, loadBalancerID string, integrationsInput v1Types.AccountIntegrations) (*v1Types.LoadBalancer, error)
-		// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
-		ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error)
 		// UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - POST `<base URL>/<version>/first_date_surpassed`
 		UpdateAppFirstDateSurpassed(ctx context.Context, updateInput v1Types.UpdateFirstDateSurpassed) ([]*v1Types.Application, error)
 		// RemoveApplication removes a single Application by updating its status field - PUT `<base URL>/<version>/application/{id}` with Remove: true
 		RemoveApplication(ctx context.Context, id string) (*v1Types.Application, error)
-		// UpdateBlockchain updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/blockchain/{id}`
-		UpdateBlockchain(ctx context.Context, blockchainID string, chainUpdate v1Types.UpdateBlockchain) (*v1Types.Blockchain, error)
 		// UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
 		UpdateLoadBalancer(ctx context.Context, id string, lbUpdate v1Types.UpdateApplication) (*v1Types.LoadBalancer, error)
 		// UpdateLoadBalancerUserRole updates a single User's role for a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}/user`
@@ -109,14 +113,19 @@ type (
 )
 
 const (
+	// v2 paths
+	chainPath basePath = "chain"
+
+	gigastakePath subPath = "gigastake"
+	activatePath  subPath = "activate"
+
+	// v1 paths
 	blockchainPath   basePath = "blockchain"
 	applicationPath  basePath = "application"
 	loadBalancerPath basePath = "load_balancer"
 	payPlanPath      basePath = "pay_plan"
 	userPath         basePath = "user"
 
-	redirectPath           subPath = "redirect"
-	activatePath           subPath = "activate"
 	firstDateSurpassedPath subPath = "first_date_surpassed"
 	permissionPath         subPath = "permission"
 	acceptPath             subPath = "accept"
@@ -140,15 +149,17 @@ var (
 	errVersionNotProvided      error = errors.New("version not provided")
 	errInvalidVersionProvided  error = errors.New("invalid version provided")
 	errNoUserID                error = errors.New("no user ID")
+	errNoChainID               error = errors.New("no chain ID")
 	errNoBlockchainID          error = errors.New("no blockchain ID")
 	errNoApplicationID         error = errors.New("no application ID")
 	errNoLoadBalancerID        error = errors.New("no load balancer ID")
 	errNoPayPlanType           error = errors.New("no pay plan type")
-	errInvalidBlockchainJSON   error = errors.New("invalid blockchain JSON")
 	errInvalidAppJSON          error = errors.New("invalid application JSON")
 	errInvalidLoadBalancerJSON error = errors.New("invalid load balancer JSON")
 	errInvalidIntegrationsJSON error = errors.New("invalid integrations JSON")
-	errInvalidActivationJSON   error = errors.New("invalid active field JSON")
+	errInvalidChainJSON        error = errors.New("invalid chain JSON")
+	errInvalidGigastakeAppJSON error = errors.New("invalid gigastake app JSON")
+	errInvalidActiveStatusJSON error = errors.New("invalid active status JSON")
 	errInvalidRoleName         error = errors.New("invalid role name")
 	errInvalidRoleNameFilter   error = errors.New("invalid role name filter")
 	errResponseNotOK           error = errors.New("Response not OK")
@@ -190,6 +201,12 @@ func (c Config) validateConfig() error {
 	return nil
 }
 
+// TODO replace this method with a new versioned BasePAth when V2 migration completed
+// v2BasePath returns the /v2/ base path for a given data type eg. `https://pocket.http-db-url.com/v2/chain`
+func (db *DBClient) v2BasePath(dataTypePath basePath) string {
+	return fmt.Sprintf("%s/v2/%s", db.config.BaseURL, dataTypePath)
+}
+
 // versionedBasePath returns the base path for a given data type eg. `https://pocket.http-db-url.com/v1/application`
 func (db *DBClient) versionedBasePath(dataTypePath basePath) string {
 	return fmt.Sprintf("%s/%s/%s", db.config.BaseURL, db.config.Version, dataTypePath)
@@ -204,6 +221,73 @@ func (db *DBClient) getAuthHeaderForRead() http.Header {
 func (db *DBClient) getAuthHeaderForWrite() http.Header {
 	return http.Header{"Authorization": {db.config.APIKey}, "Content-Type": {"application/json"}}
 }
+
+/* ----- V2 Methods ----- */
+
+/* -- Read Methods -- */
+
+// GetChainByID returns a single Chain by its relay chain ID - GET `<base URL>/v2/chain/{id}`
+func (db *DBClient) GetChainByID(ctx context.Context, chainID v2Types.RelayChainID) (*v2Types.Chain, error) {
+	if chainID == "" {
+		return nil, errNoChainID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(chainPath), chainID)
+
+	return getReq[*v2Types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+/* -- Create Methods -- */
+
+// CreateChainAndGigastakeApps creates a new blockchain and its Gigastake apps in the DB - POST `/v2/chain`
+func (db *DBClient) CreateChainAndGigastakeApps(ctx context.Context, newChainInput v2Types.NewChainInput) (*v2Types.NewChainInput, error) {
+	newChainInputJSON, err := json.Marshal(newChainInput)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidChainJSON, err)
+	}
+
+	endpoint := db.v2BasePath(chainPath)
+
+	return postReq[*v2Types.NewChainInput](endpoint, db.getAuthHeaderForWrite(), newChainInputJSON, db.httpClient)
+}
+
+// CreateGigastakeApp creates a new Gigastake app in the DB - POST `/v2/chain/gigastake`
+func (db *DBClient) CreateGigastakeApp(ctx context.Context, gigastakeAppInput v2Types.GigastakeApp) (*v2Types.GigastakeApp, error) {
+	gigastakeAppInputJSON, err := json.Marshal(gigastakeAppInput)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidGigastakeAppJSON, err)
+	}
+
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(chainPath), gigastakePath)
+
+	return postReq[*v2Types.GigastakeApp](endpoint, db.getAuthHeaderForWrite(), gigastakeAppInputJSON, db.httpClient)
+}
+
+// UpdateChain updates an existing blockchain in the DB - PUT `/v2/chain/{id}`
+func (db *DBClient) UpdateChain(ctx context.Context, chainUpdate v2Types.Chain) (*v2Types.Chain, error) {
+	chainUpdateJSON, err := json.Marshal(chainUpdate)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidChainJSON, err)
+	}
+
+	endpoint := db.v2BasePath(chainPath)
+
+	return putReq[*v2Types.Chain](endpoint, db.getAuthHeaderForWrite(), chainUpdateJSON, db.httpClient)
+}
+
+// ActivateChain activates or deactivates a blockchain by ID in the DB - PUT `/v2/chain/{id}/activate`
+func (db *DBClient) ActivateChain(ctx context.Context, chainID v2Types.RelayChainID, active bool) (bool, error) {
+	activeJSON, err := json.Marshal(active)
+	if err != nil {
+		return false, fmt.Errorf("%w: %s", errInvalidActiveStatusJSON, err)
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(chainPath), chainID, activatePath)
+
+	return putReq[bool](endpoint, db.getAuthHeaderForWrite(), activeJSON, db.httpClient)
+}
+
+/* ----- V1 Methods ----- */
 
 /* -- Read Methods -- */
 
@@ -348,30 +432,6 @@ func (db *DBClient) GetPortalUserID(ctx context.Context, providerUserID string) 
 
 /* -- Create Methods -- */
 
-// CreateBlockchain creates a single Blockchain in the DB - POST `<base URL>/<version>/blockchain`
-func (db *DBClient) CreateBlockchain(ctx context.Context, blockchain v1Types.Blockchain) (*v1Types.Blockchain, error) {
-	blockchainJSON, err := json.Marshal(blockchain)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errInvalidBlockchainJSON, err)
-	}
-
-	endpoint := db.versionedBasePath(blockchainPath)
-
-	return postReq[*v1Types.Blockchain](endpoint, db.getAuthHeaderForWrite(), blockchainJSON, db.httpClient)
-}
-
-// CreateBlockchainRedirect creates a single Blockchain Redirect in the DB - POST `<base URL>/<version>/blockchain/redirect`
-func (db *DBClient) CreateBlockchainRedirect(ctx context.Context, redirect v1Types.Redirect) (*v1Types.Redirect, error) {
-	redirectJSON, err := json.Marshal(redirect)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errInvalidAppJSON, err)
-	}
-
-	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), redirectPath)
-
-	return postReq[*v1Types.Redirect](endpoint, db.getAuthHeaderForWrite(), redirectJSON, db.httpClient)
-}
-
 // CreateLoadBalancer creates a single Load Balancer in the DB - POST `<base URL>/<version>/load_balancer`
 func (db *DBClient) CreateLoadBalancer(ctx context.Context, loadBalancer v1Types.LoadBalancer) (*v1Types.LoadBalancer, error) {
 	loadBalancerJSON, err := json.Marshal(loadBalancer)
@@ -418,22 +478,6 @@ func (db *DBClient) CreateLoadBalancerIntegration(ctx context.Context, loadBalan
 
 /* -- Update Methods -- */
 
-// ActivateBlockchain toggles a single Blockchain's `active` field` - PUT `<base URL>/<version>/blockchain/{id}/activate`
-func (db *DBClient) ActivateBlockchain(ctx context.Context, blockchainID string, active bool) (bool, error) {
-	if blockchainID == "" {
-		return false, errNoBlockchainID
-	}
-
-	activeJSON, err := json.Marshal(active)
-	if err != nil {
-		return false, fmt.Errorf("%w: %s", errInvalidActivationJSON, err)
-	}
-
-	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(blockchainPath), blockchainID, activatePath)
-
-	return postReq[bool](endpoint, db.getAuthHeaderForWrite(), activeJSON, db.httpClient)
-}
-
 // UpdateAppFirstDateSurpassed updates a slice of Applications' FirstDateSurpassed fields in the DB - POST `<base URL>/<version>/first_date_surpassed`
 func (db *DBClient) UpdateAppFirstDateSurpassed(ctx context.Context, updateInput v1Types.UpdateFirstDateSurpassed) ([]*v1Types.Application, error) {
 	firstDateSurpassedJSON, err := json.Marshal(updateInput)
@@ -444,22 +488,6 @@ func (db *DBClient) UpdateAppFirstDateSurpassed(ctx context.Context, updateInput
 	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(applicationPath), firstDateSurpassedPath)
 
 	return postReq[[]*v1Types.Application](endpoint, db.getAuthHeaderForWrite(), firstDateSurpassedJSON, db.httpClient)
-}
-
-// UpdateBlockchain updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/blockchain/{id}`
-func (db *DBClient) UpdateBlockchain(ctx context.Context, blockchainID string, chainUpdate v1Types.UpdateBlockchain) (*v1Types.Blockchain, error) {
-	if blockchainID == "" {
-		return nil, errNoBlockchainID
-	}
-
-	blockchainUpdateJSON, err := json.Marshal(chainUpdate)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errInvalidBlockchainJSON, err)
-	}
-
-	endpoint := fmt.Sprintf("%s/%s", db.versionedBasePath(blockchainPath), blockchainID)
-
-	return putReq[*v1Types.Blockchain](endpoint, db.getAuthHeaderForWrite(), blockchainUpdateJSON, db.httpClient)
 }
 
 // UpdateLoadBalancer updates a single LoadBalancer in the DB - PUT `<base URL>/<version>/load_balancer/{id}`
