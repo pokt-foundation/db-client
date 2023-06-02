@@ -9,6 +9,7 @@ import (
 	"time"
 
 	v1Types "github.com/pokt-foundation/portal-db/types"
+	"github.com/pokt-foundation/portal-db/v2/testdata"
 	v2Types "github.com/pokt-foundation/portal-db/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -83,6 +84,53 @@ func Test_V1_E2E_PocketHTTPDBTestSuite(t *testing.T) {
 // Runs all the read-only endpoint tests first to compare to test DB seed data only
 // ie. not yet including data written to the test DB by the test suite
 func (ts *phdE2EReadTestSuite) Test_ReadTests() {
+
+	/* ------ V2 Chain Read Tests ------ */
+
+	ts.Run("Test_GetChainByID", func() {
+		tests := []struct {
+			name          string
+			chainID       v2Types.RelayChainID
+			err           error
+			expectedChain *v2Types.Chain
+			gigastakeApp  *v2Types.GigastakeApp
+		}{
+			{
+				name:          "Should get chain by ID",
+				chainID:       "0001",
+				expectedChain: testdata.Chains["0001"],
+				gigastakeApp:  testdata.GigastakeApps["test_gigastake_app_1"],
+			},
+			{
+				name:    "Should return error if chain ID is empty",
+				chainID: "",
+				err:     fmt.Errorf("no chain ID"),
+			},
+			{
+				name:    "Should return error if chain does not exist",
+				chainID: "9999",
+				err:     fmt.Errorf("Response not OK. 404 Not Found: blockchain not found"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				got, err := ts.client1.GetChainByID(testCtx, test.chainID)
+				ts.Equal(test.err, err)
+
+				if err == nil {
+					// Assign GigastakeApp to the chain's GigastakeApps
+					test.expectedChain.GigastakeApps = make(map[v2Types.ProtocolAppID]*v2Types.GigastakeApp)
+					test.expectedChain.GigastakeApps[test.gigastakeApp.AATID] = test.gigastakeApp
+
+					// Compare the expectedChain and actual
+					ts.Equal(test.expectedChain, got)
+				}
+			})
+		}
+	})
+
+	/* ------ V1 Read Tests ------ */
 
 	ts.Run("Test_GetBlockchains", func() {
 		tests := []struct {
@@ -540,6 +588,226 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 // Runs all the write endpoint tests after the read tests
 // This ensures the write tests do not modify the seed data expected by the read tests
 func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
+
+	/* ------ V2 Chain Create/Update Tests ------ */
+
+	ts.Run("Test_CreateChainAndGigastakeApps", func() {
+		tests := []struct {
+			name          string
+			newChainInput v2Types.NewChainInput
+			err           error
+		}{
+			{
+				name:          "Should create a new blockchain and its Gigastake apps in the DB",
+				newChainInput: testdata.TestCreateNewChainInput,
+			},
+			{
+				name:          "Should fail if Chain is missing",
+				newChainInput: v2Types.NewChainInput{},
+				err:           fmt.Errorf("Response not OK. 400 Bad Request: error chain cannot be nil"),
+			},
+			{
+				name: "Should fail if GigastakeApp is missing",
+				newChainInput: v2Types.NewChainInput{
+					Chain: &v2Types.Chain{ID: "1234"},
+				},
+				err: fmt.Errorf("Response not OK. 400 Bad Request: error gigastakeApps slice cannot be empty"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				createdChainResp, err := ts.client1.CreateChainAndGigastakeApps(testCtx, test.newChainInput)
+				ts.Equal(test.err, err)
+
+				if test.err == nil {
+					<-time.After(50 * time.Millisecond)
+					createdChain := createdChainResp.Chain
+					createdGigastakeApps := createdChainResp.GigastakeApps
+					timestamp := createdChain.CreatedAt
+
+					test.newChainInput.Chain.CreatedAt = timestamp
+					test.newChainInput.Chain.UpdatedAt = timestamp
+
+					ts.Equal(test.newChainInput.Chain, createdChain)
+					for _, expectedApp := range test.newChainInput.GigastakeApps {
+						expectedApp.CreatedAt = timestamp
+						expectedApp.UpdatedAt = timestamp
+						for _, createdApp := range createdGigastakeApps {
+							expectedApp.AATID = createdApp.AATID
+							expectedApp.ChainID = createdApp.ChainID
+							expectedApp.AAT.ID = createdApp.AATID
+							ts.Equal(test.newChainInput.GigastakeApps, createdGigastakeApps)
+						}
+					}
+
+					createdChainByID, err := ts.client1.GetChainByID(testCtx, createdChain.ID)
+					ts.NoError(err)
+					createdChainByID.CreatedAt = timestamp
+					createdChainByID.UpdatedAt = timestamp
+					ts.Len(createdChainByID.GigastakeApps, 1)
+					createdChainByID.GigastakeApps = nil
+					ts.Equal(createdChain, createdChainByID)
+
+					createdChainByID, err = ts.client2.GetChainByID(testCtx, createdChain.ID)
+					ts.NoError(err)
+					createdChainByID.CreatedAt = timestamp
+					createdChainByID.UpdatedAt = timestamp
+					ts.Len(createdChainByID.GigastakeApps, 1)
+					createdChainByID.GigastakeApps = nil
+					ts.Equal(createdChain, createdChainByID)
+				}
+			})
+		}
+	})
+
+	ts.Run("Test_CreateGigastakeApp", func() {
+		tests := []struct {
+			name              string
+			gigastakeAppInput v2Types.GigastakeApp
+			err               error
+			expected          *v2Types.GigastakeApp
+		}{
+			{
+				name:              "Should create a new Gigastake app in the DB",
+				gigastakeAppInput: testdata.TestCreateGigastakeApp,
+				expected:          &testdata.TestCreateGigastakeApp,
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				createdGigastakeApp, err := ts.client1.CreateGigastakeApp(testCtx, test.gigastakeAppInput)
+				ts.Equal(test.err, err)
+
+				if err == nil {
+					<-time.After(50 * time.Millisecond)
+					timestamp := createdGigastakeApp.CreatedAt
+
+					// Ensure timestamps are the same before comparing
+					test.expected.CreatedAt = timestamp
+					test.expected.UpdatedAt = timestamp
+					test.expected.AATID = createdGigastakeApp.AATID
+					test.expected.AAT.ID = createdGigastakeApp.AATID
+					test.expected.AAT.PrivateKey = ""
+
+					ts.Equal(test.expected, createdGigastakeApp)
+				}
+			})
+		}
+	})
+
+	ts.Run("Test_UpdateChain", func() {
+		tests := []struct {
+			name        string
+			chainUpdate v2Types.Chain
+			noSubtables bool
+			err         error
+		}{
+			{
+				name:        "Should update the blockchain in the DB",
+				chainUpdate: testdata.UpdateChainOne,
+			},
+			{
+				name:        "Should update the blockchain again in the DB",
+				chainUpdate: testdata.UpdateChainTwo,
+			},
+			{
+				name:        "Should update the blockchain a third time in the DB without removing any subtables",
+				chainUpdate: testdata.UpdateChainThree,
+				noSubtables: true, // When no subtables are passed in the update do not modify the subtables of the expected chain
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				chainUpdateResponse, err := ts.client1.UpdateChain(testCtx, test.chainUpdate)
+				ts.Equal(test.err, err)
+
+				if test.err == nil {
+					<-time.After(50 * time.Millisecond)
+
+					ts.NotEmpty(chainUpdateResponse)
+
+					timestamp := chainUpdateResponse.CreatedAt
+
+					test.chainUpdate.CreatedAt = timestamp
+					test.chainUpdate.UpdatedAt = timestamp
+
+					ts.Equal(test.chainUpdate, *chainUpdateResponse)
+
+					updatedChainByID, err := ts.client1.GetChainByID(testCtx, chainUpdateResponse.ID)
+					ts.NoError(err)
+					if test.noSubtables {
+						test.chainUpdate.Altruists = updatedChainByID.Altruists
+						test.chainUpdate.Checks = updatedChainByID.Checks
+						test.chainUpdate.AliasDomains = updatedChainByID.AliasDomains
+					}
+					updatedChainByID.CreatedAt = timestamp
+					updatedChainByID.UpdatedAt = timestamp
+					ts.NotEmpty(updatedChainByID.GigastakeApps, 1)
+					updatedChainByID.GigastakeApps = nil
+					ts.Equal(test.chainUpdate, *updatedChainByID)
+
+					updatedChainByID, err = ts.client2.GetChainByID(testCtx, chainUpdateResponse.ID)
+					if test.noSubtables {
+						test.chainUpdate.Altruists = updatedChainByID.Altruists
+						test.chainUpdate.Checks = updatedChainByID.Checks
+						test.chainUpdate.AliasDomains = updatedChainByID.AliasDomains
+					}
+					ts.NoError(err)
+					updatedChainByID.CreatedAt = timestamp
+					updatedChainByID.UpdatedAt = timestamp
+					ts.NotEmpty(updatedChainByID.GigastakeApps, 1)
+					updatedChainByID.GigastakeApps = nil
+					ts.Equal(test.chainUpdate, *updatedChainByID)
+				}
+			})
+		}
+	})
+
+	ts.Run("Test_ActivateChain", func() {
+		tests := []struct {
+			name    string
+			chainID v2Types.RelayChainID
+			active  bool
+			err     error
+		}{
+			{
+				name:    "Should activate a blockchain in the DB",
+				chainID: "0064",
+				active:  true,
+			},
+			{
+				name:    "Should deactivate a blockchain in the DB",
+				chainID: "0064",
+				active:  false,
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				chainActive, err := ts.client1.ActivateChain(testCtx, test.chainID, test.active)
+				ts.Equal(test.err, err)
+
+				if err == nil {
+					<-time.After(50 * time.Millisecond)
+					ts.Equal(test.active, chainActive)
+
+					fetchedChain, err := ts.client1.GetChainByID(testCtx, test.chainID)
+					ts.NoError(err)
+					ts.Equal(test.active, fetchedChain.Active)
+
+					fetchedChain, err = ts.client2.GetChainByID(testCtx, test.chainID)
+					ts.NoError(err)
+					ts.Equal(test.active, fetchedChain.Active)
+				}
+			})
+		}
+	})
+
+	/* ------ V1 Write Tests ------ */
+
 	ts.Run("Test_CreatePortalUser", func() {
 		tests := []struct {
 			name             string
@@ -593,6 +861,8 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
+					<-time.After(50 * time.Millisecond)
+
 					test.expectedResponse.User.ID = createdUser.User.ID
 					test.expectedResponse.User.UpdatedAt = createdUser.User.UpdatedAt
 					test.expectedResponse.User.CreatedAt = createdUser.User.CreatedAt
@@ -636,6 +906,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				ts.Equal(test.err, err)
 
 				test.loadBalancer.Integrations.CovalentAPIKeyFree = test.expectedCovalentAPIKey
+				test.loadBalancer.Applications[0].GatewayAAT.PrivateKey = ""
 				test.loadBalancer.ID = createdLB.ID
 				test.loadBalancer.UserID = test.userID
 				test.loadBalancer.Applications[0].ID = createdLB.Applications[0].ID
@@ -646,6 +917,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 				if test.err == nil {
 					<-time.After(50 * time.Millisecond)
+
 					loadBalancer, err := ts.client1.GetLoadBalancerByID(testCtx, createdLB.ID)
 					ts.Equal(test.err, err)
 					clearTimeFields(loadBalancer)
@@ -1061,6 +1333,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				ts.Equal(test.err, err)
 				if test.err == nil {
 					<-time.After(50 * time.Millisecond)
+
 					loadBalancer, err := ts.client1.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 					ts.Equal(test.err, err)
 					ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
@@ -1178,6 +1451,8 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				updatedLB, err := ts.client1.CreateLoadBalancerUser(testCtx, test.loadBalancerID, test.user)
 				ts.Equal(test.err, err)
 				if test.err == nil {
+					<-time.After(50 * time.Millisecond)
+
 					// Find the user in updatedLB.Users with the same email as test.user
 					for _, updatedUser := range updatedLB.Users {
 						if updatedUser.Email == test.user.Email {
@@ -1191,7 +1466,6 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					}
 					ts.Equal(test.loadBalancerUsers, userAccessSliceToMap(updatedLB.Users))
 
-					<-time.After(50 * time.Millisecond)
 					loadBalancer, err := ts.client1.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 					ts.Equal(test.err, err)
 					ts.Equal(test.loadBalancerUsers, userAccessSliceToMap(loadBalancer.Users))
@@ -1250,8 +1524,10 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 			ts.Run(test.name, func() {
 				_, err := ts.client1.DeleteLoadBalancerUser(testCtx, test.loadBalancerID, test.userID)
 				ts.Equal(test.err, err)
+
 				if test.err == nil {
 					<-time.After(50 * time.Millisecond)
+
 					loadBalancer, err := ts.client1.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 					ts.Equal(test.err, err)
 					ts.Equal(test.loadBalancerUsers, loadBalancer.Users)
@@ -1303,8 +1579,10 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 			ts.Run(test.name, func() {
 				_, err := ts.client1.RemoveLoadBalancer(testCtx, test.loadBalancerID)
 				ts.Equal(test.err, err)
+
 				if test.err == nil {
 					<-time.After(50 * time.Millisecond)
+
 					loadBalancer, err := ts.client1.GetLoadBalancerByID(testCtx, test.loadBalancerID)
 					ts.Equal("Response not OK. 404 Not Found: portal app not found for load balancer ID test_app_3", err.Error())
 					ts.Nil(loadBalancer)
@@ -1456,7 +1734,7 @@ var (
 				ApplicationPublicKey: "test_34715cae753e67c75fbb340442e7de8e",
 				ApplicationSignature: "test_1dc39a2e5a84a35bf030969a0b3231f7",
 				ClientPublicKey:      "test_89a3af6a587aec02cfade6f5000424c2",
-				PrivateKey:           "test_11b8d394ca331d7c7a71ca1896d630f6",
+				PrivateKey:           "",
 				Version:              "0.0.1",
 			},
 			GatewaySettings: v1Types.GatewaySettings{
@@ -1496,7 +1774,7 @@ var (
 				ApplicationPublicKey: "test_8237c72345f12d1b1a8b64a1a7f66fa4",
 				ApplicationSignature: "test_f48d33b30ddaf60a1e5bb50d2ba8da5a",
 				ClientPublicKey:      "test_04c71d90a92f40416b6f1d7d8af17e02",
-				PrivateKey:           "test_2e83c836a29b423a47d8e18c779fd422",
+				PrivateKey:           "",
 				Version:              "0.0.1",
 			},
 			Limit: v1Types.AppLimit{
@@ -1534,7 +1812,7 @@ var (
 				ApplicationPublicKey: "test_f608500e4fe3e09014fe2411b4a560b5",
 				ApplicationSignature: "test_c3cd8be16ba32e24dd49fdb0247fc9b8",
 				ClientPublicKey:      "test_328a9cf1b35085eeaa669aa858f6fba9",
-				PrivateKey:           "test_8663e187c19f3c6e27317eab4ed6d7d5",
+				PrivateKey:           "",
 				Version:              "0.0.1",
 			},
 			Limit: v1Types.AppLimit{
@@ -1560,7 +1838,7 @@ var (
 				ApplicationPublicKey: "test_f6a5d8690ecb669865bd752b7796a920",
 				ApplicationSignature: "test_cf05cf9bb26111c548e88fb6157af708",
 				ClientPublicKey:      "test_6ee5ea553408f0895923fd1569dc5072",
-				PrivateKey:           "test_838d29d61a65401f7d56d084cb6e4783",
+				PrivateKey:           "",
 				Version:              "0.0.1",
 			},
 			Limit: v1Types.AppLimit{
@@ -1585,7 +1863,7 @@ var (
 				ApplicationPublicKey: "test_37a0e8437f5149dc98a9a5b207efc2d0",
 				ApplicationSignature: "test_f22651fb566346fca30b605e5f46e3ca",
 				ClientPublicKey:      "test_65c29f0cc82e418b81a528a0c0682a9f",
-				PrivateKey:           "test_0a6df2b97ae546da83f1a90b9b0c1e83",
+				PrivateKey:           "",
 				Version:              "0.0.1",
 			},
 			CreatedAt: mockTimestamp,
@@ -1599,7 +1877,7 @@ var (
 				ApplicationPublicKey: "test_a7e28f8d716541a0a332a5dc6b7e4e6e",
 				ApplicationSignature: "test_52e991c26da841bc882ad3a3ee9ee964",
 				ClientPublicKey:      "test_ba4e53dada8f4f939048e56dc8f88f37",
-				PrivateKey:           "test_86b9e8e14a784db8a0a4c2ee532b6a12",
+				PrivateKey:           "",
 				Version:              "0.0.1",
 			},
 			CreatedAt: mockTimestamp,
@@ -1613,7 +1891,7 @@ var (
 				ApplicationPublicKey: "test_4f805bbbf96c4a649efc3f4f95616f2e",
 				ApplicationSignature: "test_01eac46efc9242a2be73879f1d09f1dc",
 				ClientPublicKey:      "test_789f9d6adcc846f1a079bf68237b5f5c",
-				PrivateKey:           "test_25a9063b3b7b42148dc17033fbbab5c6",
+				PrivateKey:           "",
 				Version:              "0.0.1",
 			},
 			CreatedAt: mockTimestamp,
@@ -1755,7 +2033,7 @@ var (
 						ApplicationPublicKey: "test_37a0e8437f5149dc98a9a5b207efc2d0",
 						ApplicationSignature: "test_f22651fb566346fca30b605e5f46e3ca",
 						ClientPublicKey:      "test_65c29f0cc82e418b81a528a0c0682a9f",
-						PrivateKey:           "test_0a6df2b97ae546da83f1a90b9b0c1e83",
+						PrivateKey:           "",
 						Version:              "0.0.1",
 					},
 					CreatedAt: mockTimestamp,
@@ -1777,7 +2055,7 @@ var (
 						ApplicationPublicKey: "test_a7e28f8d716541a0a332a5dc6b7e4e6e",
 						ApplicationSignature: "test_52e991c26da841bc882ad3a3ee9ee964",
 						ClientPublicKey:      "test_ba4e53dada8f4f939048e56dc8f88f37",
-						PrivateKey:           "test_86b9e8e14a784db8a0a4c2ee532b6a12",
+						PrivateKey:           "",
 						Version:              "0.0.1",
 					},
 					CreatedAt: mockTimestamp,
@@ -1799,7 +2077,7 @@ var (
 						ApplicationPublicKey: "test_4f805bbbf96c4a649efc3f4f95616f2e",
 						ApplicationSignature: "test_01eac46efc9242a2be73879f1d09f1dc",
 						ClientPublicKey:      "test_789f9d6adcc846f1a079bf68237b5f5c",
-						PrivateKey:           "test_25a9063b3b7b42148dc17033fbbab5c6",
+						PrivateKey:           "",
 						Version:              "0.0.1",
 					},
 					CreatedAt: mockTimestamp,
