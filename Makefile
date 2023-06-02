@@ -19,11 +19,11 @@ test_env_down:
 	@echo "✅ Test environment is down."
 
 
-run_client_tests:
-	-go test ./... -run Test_RunDBClientTestSuite -count=1 -v;
+run_tests:
+	-go test ./... -count=1;
 
 # This target runs all tests, which includes spinning up the Docker test env.
-test: test_env_up run_client_tests test_env_down
+test: test_env_up run_tests test_env_down
 
 # This target install pre-commit to the repo and should be run only once, after cloning the repo for the first time.
 init-pre-commit:
