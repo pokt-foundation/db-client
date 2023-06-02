@@ -20,7 +20,7 @@ test_env_down:
 
 
 run_client_tests:
-	-go test ./... -run Test_RunDBClientTestSuite -count=1 -v;
+	-go test ./... -run E2E_PocketHTTPDBTestSuite -count=1;
 
 # This target runs all tests, which includes spinning up the Docker test env.
 test: test_env_up run_client_tests test_env_down
