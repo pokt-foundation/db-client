@@ -27,12 +27,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Tag
-        uses: codfish/semantic-release-action@v2.0.0
+      - name: Tag Semantic Release Version
         id: semantic
+        uses: codfish/semantic-release-action@v2
         with:
           branches: |
-            ['main']
+            [
+              'main',
+              {
+                name: 'beta',
+                prerelease: 'rc'
+              }
+            ]
           tag_format: "v${version}"
           additional_packages: |
             ['@semantic-release/commit-analyzer']
@@ -41,4 +47,4 @@ jobs:
 
       - name: Go List
         if: steps.semantic.outputs.new-release-published == 'true'
-        run: GOPROXY=proxy.golang.org go list -m github.com/pokt-foundation/db-client@v${{ steps.semantic.outputs.release-version }}
+        run: GOPROXY=proxy.golang.org go list -m github.com/pokt-foundation/db-client/v2@v${{ steps.semantic.outputs.release-version }}

@@ -5,7 +5,7 @@ package dbclient
 import (
 	context "context"
 
-	types "github.com/pokt-foundation/portal-db/types"
+	types "github.com/pokt-foundation/portal-db/v2/types"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -14,22 +14,22 @@ type MockIDBReader struct {
 	mock.Mock
 }
 
-// GetApplicationByID provides a mock function with given fields: ctx, applicationID
-func (_m *MockIDBReader) GetApplicationByID(ctx context.Context, applicationID string) (*types.Application, error) {
-	ret := _m.Called(ctx, applicationID)
+// GetAccountByID provides a mock function with given fields: ctx, accountID
+func (_m *MockIDBReader) GetAccountByID(ctx context.Context, accountID types.AccountID) (*types.Account, error) {
+	ret := _m.Called(ctx, accountID)
 
-	var r0 *types.Application
-	if rf, ok := ret.Get(0).(func(context.Context, string) *types.Application); ok {
-		r0 = rf(ctx, applicationID)
+	var r0 *types.Account
+	if rf, ok := ret.Get(0).(func(context.Context, types.AccountID) *types.Account); ok {
+		r0 = rf(ctx, accountID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.Application)
+			r0 = ret.Get(0).(*types.Account)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, applicationID)
+	if rf, ok := ret.Get(1).(func(context.Context, types.AccountID) error); ok {
+		r1 = rf(ctx, accountID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -37,44 +37,21 @@ func (_m *MockIDBReader) GetApplicationByID(ctx context.Context, applicationID s
 	return r0, r1
 }
 
-// GetApplications provides a mock function with given fields: ctx
-func (_m *MockIDBReader) GetApplications(ctx context.Context) ([]*types.Application, error) {
-	ret := _m.Called(ctx)
-
-	var r0 []*types.Application
-	if rf, ok := ret.Get(0).(func(context.Context) []*types.Application); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*types.Application)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetApplicationsByUserID provides a mock function with given fields: ctx, userID
-func (_m *MockIDBReader) GetApplicationsByUserID(ctx context.Context, userID string) ([]*types.Application, error) {
+// GetAccountsByUser provides a mock function with given fields: ctx, userID
+func (_m *MockIDBReader) GetAccountsByUser(ctx context.Context, userID types.UserID) ([]types.Account, error) {
 	ret := _m.Called(ctx, userID)
 
-	var r0 []*types.Application
-	if rf, ok := ret.Get(0).(func(context.Context, string) []*types.Application); ok {
+	var r0 []types.Account
+	if rf, ok := ret.Get(0).(func(context.Context, types.UserID) []types.Account); ok {
 		r0 = rf(ctx, userID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*types.Application)
+			r0 = ret.Get(0).([]types.Account)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, types.UserID) error); ok {
 		r1 = rf(ctx, userID)
 	} else {
 		r1 = ret.Error(1)
@@ -83,22 +60,91 @@ func (_m *MockIDBReader) GetApplicationsByUserID(ctx context.Context, userID str
 	return r0, r1
 }
 
-// GetBlockchainByID provides a mock function with given fields: ctx, blockchainID
-func (_m *MockIDBReader) GetBlockchainByID(ctx context.Context, blockchainID string) (*types.Blockchain, error) {
-	ret := _m.Called(ctx, blockchainID)
+// GetAllPortalApps provides a mock function with given fields: ctx
+func (_m *MockIDBReader) GetAllPortalApps(ctx context.Context) ([]types.PortalApp, error) {
+	ret := _m.Called(ctx)
 
-	var r0 *types.Blockchain
-	if rf, ok := ret.Get(0).(func(context.Context, string) *types.Blockchain); ok {
-		r0 = rf(ctx, blockchainID)
+	var r0 []types.PortalApp
+	if rf, ok := ret.Get(0).(func(context.Context) []types.PortalApp); ok {
+		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.Blockchain)
+			r0 = ret.Get(0).([]types.PortalApp)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetBlockedContracts provides a mock function with given fields: ctx
+func (_m *MockIDBReader) GetBlockedContracts(ctx context.Context) ([]types.BlockedContract, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []types.BlockedContract
+	if rf, ok := ret.Get(0).(func(context.Context) []types.BlockedContract); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]types.BlockedContract)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetChainByID provides a mock function with given fields: ctx, chainID
+func (_m *MockIDBReader) GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error) {
+	ret := _m.Called(ctx, chainID)
+
+	var r0 *types.Chain
+	if rf, ok := ret.Get(0).(func(context.Context, types.RelayChainID) *types.Chain); ok {
+		r0 = rf(ctx, chainID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Chain)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, types.RelayChainID) error); ok {
+		r1 = rf(ctx, chainID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetPortalAppByID provides a mock function with given fields: ctx, portalAppID
+func (_m *MockIDBReader) GetPortalAppByID(ctx context.Context, portalAppID string) (*types.PortalApp, error) {
+	ret := _m.Called(ctx, portalAppID)
+
+	var r0 *types.PortalApp
+	if rf, ok := ret.Get(0).(func(context.Context, string) *types.PortalApp); ok {
+		r0 = rf(ctx, portalAppID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.PortalApp)
 		}
 	}
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, blockchainID)
+		r1 = rf(ctx, portalAppID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -106,22 +152,22 @@ func (_m *MockIDBReader) GetBlockchainByID(ctx context.Context, blockchainID str
 	return r0, r1
 }
 
-// GetBlockchains provides a mock function with given fields: ctx
-func (_m *MockIDBReader) GetBlockchains(ctx context.Context) ([]*types.Blockchain, error) {
-	ret := _m.Called(ctx)
+// GetPortalAppsByUser provides a mock function with given fields: ctx, userID, filter
+func (_m *MockIDBReader) GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]types.PortalApp, error) {
+	ret := _m.Called(ctx, userID, filter)
 
-	var r0 []*types.Blockchain
-	if rf, ok := ret.Get(0).(func(context.Context) []*types.Blockchain); ok {
-		r0 = rf(ctx)
+	var r0 []types.PortalApp
+	if rf, ok := ret.Get(0).(func(context.Context, types.UserID, types.RoleName) []types.PortalApp); ok {
+		r0 = rf(ctx, userID, filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*types.Blockchain)
+			r0 = ret.Get(0).([]types.PortalApp)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, types.UserID, types.RoleName) error); ok {
+		r1 = rf(ctx, userID, filter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -129,123 +175,8 @@ func (_m *MockIDBReader) GetBlockchains(ctx context.Context) ([]*types.Blockchai
 	return r0, r1
 }
 
-// GetLoadBalancerByID provides a mock function with given fields: ctx, loadBalancerID
-func (_m *MockIDBReader) GetLoadBalancerByID(ctx context.Context, loadBalancerID string) (*types.LoadBalancer, error) {
-	ret := _m.Called(ctx, loadBalancerID)
-
-	var r0 *types.LoadBalancer
-	if rf, ok := ret.Get(0).(func(context.Context, string) *types.LoadBalancer); ok {
-		r0 = rf(ctx, loadBalancerID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.LoadBalancer)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, loadBalancerID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetLoadBalancers provides a mock function with given fields: ctx
-func (_m *MockIDBReader) GetLoadBalancers(ctx context.Context) ([]*types.LoadBalancer, error) {
-	ret := _m.Called(ctx)
-
-	var r0 []*types.LoadBalancer
-	if rf, ok := ret.Get(0).(func(context.Context) []*types.LoadBalancer); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*types.LoadBalancer)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetLoadBalancersByUserID provides a mock function with given fields: ctx, userID, roleNameFilter
-func (_m *MockIDBReader) GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *types.RoleName) ([]*types.LoadBalancer, error) {
-	ret := _m.Called(ctx, userID, roleNameFilter)
-
-	var r0 []*types.LoadBalancer
-	if rf, ok := ret.Get(0).(func(context.Context, string, *types.RoleName) []*types.LoadBalancer); ok {
-		r0 = rf(ctx, userID, roleNameFilter)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*types.LoadBalancer)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, *types.RoleName) error); ok {
-		r1 = rf(ctx, userID, roleNameFilter)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetPayPlanByType provides a mock function with given fields: ctx, payPlanType
-func (_m *MockIDBReader) GetPayPlanByType(ctx context.Context, payPlanType types.PayPlanType) (*types.PayPlan, error) {
-	ret := _m.Called(ctx, payPlanType)
-
-	var r0 *types.PayPlan
-	if rf, ok := ret.Get(0).(func(context.Context, types.PayPlanType) *types.PayPlan); ok {
-		r0 = rf(ctx, payPlanType)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.PayPlan)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, types.PayPlanType) error); ok {
-		r1 = rf(ctx, payPlanType)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetPayPlans provides a mock function with given fields: ctx
-func (_m *MockIDBReader) GetPayPlans(ctx context.Context) ([]*types.PayPlan, error) {
-	ret := _m.Called(ctx)
-
-	var r0 []*types.PayPlan
-	if rf, ok := ret.Get(0).(func(context.Context) []*types.PayPlan); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*types.PayPlan)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetUserPermissionsByUserID provides a mock function with given fields: ctx, userID
-func (_m *MockIDBReader) GetUserPermissionsByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
+// GetUserPermissionByUserID provides a mock function with given fields: ctx, userID
+func (_m *MockIDBReader) GetUserPermissionByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
 	ret := _m.Called(ctx, userID)
 
 	var r0 *types.UserPermissions
