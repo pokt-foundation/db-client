@@ -41,6 +41,8 @@ type (
 	IDBReader interface {
 		// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
 		GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error)
+		// GetAllChains returns all chains - GET `<base URL>/v2/chain`
+		GetAllChains(ctx context.Context) ([]*types.Chain, error)
 
 		// GetPortalAppByID returns a single Portal App by its ID - GET `/v2/portal_app/{id}`
 		GetPortalAppByID(ctx context.Context, portalAppID string) (*types.PortalApp, error)
@@ -219,6 +221,13 @@ func (db *DBClient) GetChainByID(ctx context.Context, chainID types.RelayChainID
 	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(chainPath), chainID)
 
 	return getReq[*types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetAllChains returns all chains - GET `<base URL>/v2/chain`
+func (db *DBClient) GetAllChains(ctx context.Context) ([]*types.Chain, error) {
+	endpoint := db.v2BasePath(chainPath)
+
+	return getReq[[]*types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Portal App Read Methods -- */
