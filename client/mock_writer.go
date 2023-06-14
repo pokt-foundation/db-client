@@ -475,14 +475,16 @@ func (_m *MockIDBWriter) UpdatePortalApp(ctx context.Context, portalAppUpdate ty
 }
 
 // WriteAccountUser provides a mock function with given fields: ctx, createUser, _a2
-func (_m *MockIDBWriter) WriteAccountUser(ctx context.Context, createUser types.CreateAccountUserAccess, _a2 time.Time) (types.UserID, error) {
+func (_m *MockIDBWriter) WriteAccountUser(ctx context.Context, createUser types.CreateAccountUserAccess, _a2 time.Time) (map[string]types.UserID, error) {
 	ret := _m.Called(ctx, createUser, _a2)
 
-	var r0 types.UserID
-	if rf, ok := ret.Get(0).(func(context.Context, types.CreateAccountUserAccess, time.Time) types.UserID); ok {
+	var r0 map[string]types.UserID
+	if rf, ok := ret.Get(0).(func(context.Context, types.CreateAccountUserAccess, time.Time) map[string]types.UserID); ok {
 		r0 = rf(ctx, createUser, _a2)
 	} else {
-		r0 = ret.Get(0).(types.UserID)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]types.UserID)
+		}
 	}
 
 	var r1 error
