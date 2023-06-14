@@ -41,26 +41,26 @@ type (
 	IDBReader interface {
 		// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
 		GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error)
-		// GetAllChains returns all chains - GET `<base URL>/v2/chain`
+		// GetAllChains returns all chains - GET `/v2/chain`
 		GetAllChains(ctx context.Context) ([]*types.Chain, error)
 
 		// GetPortalAppByID returns a single Portal App by its ID - GET `/v2/portal_app/{id}`
-		GetPortalAppByID(ctx context.Context, portalAppID string) (*types.PortalApp, error)
+		GetPortalAppByID(ctx context.Context, portalAppID types.PortalAppID) (*types.PortalApp, error)
 		// GetAllPortalApps returns all Portal Apps - GET `/v2/portal_app`
-		GetAllPortalApps(ctx context.Context) ([]types.PortalApp, error)
+		GetAllPortalApps(ctx context.Context) ([]*types.PortalApp, error)
 		// GetPortalAppsByUser fetches all portal applications - GET `/v2/user/{userID}/portal_app`
-		GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]types.PortalApp, error)
+		GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error)
 
-		// GetAccountByID returns a single Account by its account ID - GET `<base URL>/v2/account/{id}`
+		// GetAccountByID returns a single Account by its account ID - GET `/v2/account/{id}`
 		GetAccountByID(ctx context.Context, accountID types.AccountID) (*types.Account, error)
 		// GetAccountsByUser returns all accounts for a given user ID - GET `/v2/user/{userID}/account`
-		GetAccountsByUser(ctx context.Context, userID types.UserID) ([]types.Account, error)
+		GetAccountsByUser(ctx context.Context, userID types.UserID) ([]*types.Account, error)
 
 		// GetUserPermissionByUserID returns all PortalApp permissions for a given provider user ID - GET `/v2/user/{userID}/permission`
-		GetUserPermissionByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error)
+		GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error)
 
-		// GetBlockedContracts returns all blocked contracts - GET `<base URL>/v2/blocked_contract`
-		GetBlockedContracts(ctx context.Context) ([]types.BlockedContract, error)
+		// GetBlockedContracts returns all blocked contracts - GET `/v2/blocked_contract`
+		GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error)
 	}
 
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
@@ -81,7 +81,7 @@ type (
 		// UpdatePortalApp updates an existing Portal App - PUT `/v2/portal_app/{id}`
 		UpdatePortalApp(ctx context.Context, portalAppUpdate types.UpdatePortalApp) (*types.UpdatePortalApp, error)
 		// DeletePortalApp deletes a Portal App - DELETE `/v2/portal_app/{id}`
-		DeletePortalApp(ctx context.Context, portalAppID string) (bool, error)
+		DeletePortalApp(ctx context.Context, portalAppID types.PortalAppID) (map[string]string, error)
 
 		// CreateAccount creates a new Account in the database for a single user - POST `/v2/user/{userID}/account`
 		CreateAccount(ctx context.Context, userID types.UserID, account types.Account, timestamp time.Time) (*types.Account, error)
@@ -92,10 +92,10 @@ type (
 		// UpdateAccountIntegration updates an existing integration for an account - PUT `/v2/account/{id}/integration`
 		UpdateAccountIntegration(ctx context.Context, accountID types.AccountID, integration types.AccountIntegrations) (*types.AccountIntegrations, error)
 		// DeleteAccount deletes an account in the DB - DELETE `/v2/account/{id}`
-		DeleteAccount(ctx context.Context, accountID types.AccountID) (bool, error)
+		DeleteAccount(ctx context.Context, accountID types.AccountID) (map[string]string, error)
 
 		// WriteAccountUser creates a single Account User - POST `/v2/account/user`
-		WriteAccountUser(ctx context.Context, createUser types.CreateAccountUserAccess, time time.Time) (types.UserID, error)
+		WriteAccountUser(ctx context.Context, createUser types.CreateAccountUserAccess, time time.Time) (map[string]types.UserID, error)
 		// SetAccountUserRole updates the role for a single Account User - PUT `/v2/account/user/update_role`
 		SetAccountUserRole(ctx context.Context, updateUser types.UpdateAccountUserRole, time time.Time) (map[string]string, error)
 		// UpdateAcceptAccountUser accepts an Account User Access - PUT `/v2/account/user/accept`
@@ -108,11 +108,11 @@ type (
 		// DeleteUser deletes a User - DELETE `/v2/user/{userID}`
 		DeleteUser(ctx context.Context, userID types.UserID) (map[string]string, error)
 
-		// WriteBlockedContract adds a new blocked address to the global blocked contracts - POST `<base URL>/v2/blocked_contract`
+		// WriteBlockedContract adds a new blocked address to the global blocked contracts - POST `/v2/blocked_contract`
 		WriteBlockedContract(ctx context.Context, blockedContract types.BlockedContract) (map[string]string, error)
-		// UpdateBlockedContractActive updates the active status of a blocked contract - PUT `<base URL>/v2/blocked_contract/{address}/active`
+		// UpdateBlockedContractActive updates the active status of a blocked contract - PUT `/v2/blocked_contract/{address}/active`
 		UpdateBlockedContractActive(ctx context.Context, address types.BlockedAddress, isActive bool) (map[string]bool, error)
-		// RemoveBlockedContract deletes a blocked address from the global blocked contracts - DELETE `<base URL>/v2/blocked_contract/{address}`
+		// RemoveBlockedContract deletes a blocked address from the global blocked contracts - DELETE `/v2/blocked_contract/{address}`
 		RemoveBlockedContract(ctx context.Context, address types.BlockedAddress) (map[string]string, error)
 	}
 
@@ -150,6 +150,7 @@ var (
 	errNoAuthProviderType error = errors.New("no auth provider type")
 	errNoProviderUserID   error = errors.New("no provider user ID")
 	errNoEmail            error = errors.New("no email")
+	errNoPlanTypeSet      error = errors.New("no plan type set")
 	errNoBlockedAddress   error = errors.New("no blocked address provided")
 
 	errInvalidPortalAppJSON          error = errors.New("invalid portal app JSON")
@@ -212,7 +213,7 @@ func (db *DBClient) getAuthHeaderForWrite() http.Header {
 
 /* -- Chain Read Methods -- */
 
-// GetChainByID returns a single Chain by its relay chain ID - GET `<base URL>/v2/chain/{id}`
+// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
 func (db *DBClient) GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error) {
 	if chainID == "" {
 		return nil, errNoChainID
@@ -223,7 +224,7 @@ func (db *DBClient) GetChainByID(ctx context.Context, chainID types.RelayChainID
 	return getReq[*types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetAllChains returns all chains - GET `<base URL>/v2/chain`
+// GetAllChains returns all chains - GET `/v2/chain`
 func (db *DBClient) GetAllChains(ctx context.Context) ([]*types.Chain, error) {
 	endpoint := db.v2BasePath(chainPath)
 
@@ -232,8 +233,8 @@ func (db *DBClient) GetAllChains(ctx context.Context) ([]*types.Chain, error) {
 
 /* -- Portal App Read Methods -- */
 
-// GetPortalAppByID returns a single Portal App by its ID - GET `<base URL>/v2/portal_app/{id}`
-func (db *DBClient) GetPortalAppByID(ctx context.Context, portalAppID string) (*types.PortalApp, error) {
+// GetPortalAppByID returns a single Portal App by its ID - GET `/v2/portal_app/{id}`
+func (db *DBClient) GetPortalAppByID(ctx context.Context, portalAppID types.PortalAppID) (*types.PortalApp, error) {
 	if portalAppID == "" {
 		return nil, errNoPortalAppID
 	}
@@ -243,27 +244,27 @@ func (db *DBClient) GetPortalAppByID(ctx context.Context, portalAppID string) (*
 	return getReq[*types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetAllPortalApps returns all Portal Apps - GET `<base URL>/v2/portal_app`
-func (db *DBClient) GetAllPortalApps(ctx context.Context) ([]types.PortalApp, error) {
+// GetAllPortalApps returns all Portal Apps - GET `/v2/portal_app`
+func (db *DBClient) GetAllPortalApps(ctx context.Context) ([]*types.PortalApp, error) {
 	endpoint := db.v2BasePath(portalAppPath)
 
-	return getReq[[]types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	return getReq[[]*types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 // GetPortalAppsByUser fetches all portal applications - GET `/v2/user/{userID}/portal_app`
-func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]types.PortalApp, error) {
+func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s?filter=%s", db.v2BasePath(userPath), userID, portalAppPath, filter)
 
-	return getReq[[]types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	return getReq[[]*types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Account Read Methods -- */
 
-// GetAccountByID returns a single Account by its account ID - GET `<base URL>/v2/account/{id}`
+// GetAccountByID returns a single Account by its account ID - GET `/v2/account/{id}`
 func (db *DBClient) GetAccountByID(ctx context.Context, accountID types.AccountID) (*types.Account, error) {
 	if accountID == "" {
 		return nil, errNoAccountID
@@ -275,36 +276,36 @@ func (db *DBClient) GetAccountByID(ctx context.Context, accountID types.AccountI
 }
 
 // GetAccountsByUser returns all accounts for a given user ID - GET `/v2/user/{userID}/account`
-func (db *DBClient) GetAccountsByUser(ctx context.Context, userID types.UserID) ([]types.Account, error) {
+func (db *DBClient) GetAccountsByUser(ctx context.Context, userID types.UserID) ([]*types.Account, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(userPath), userID, accountPath)
 
-	return getReq[[]types.Account](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	return getReq[[]*types.Account](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- User Read Methods -- */
 
 // GetUserPermissionByUserID returns all PortalApp permissions for a given provider user ID - GET `/v2/user/{userID}/permission`
-func (db *DBClient) GetUserPermissionByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
-	if userID == "" {
+func (db *DBClient) GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error) {
+	if providerUserID == "" {
 		return nil, errNoUserID
 	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(userPath), userID, permissionPath)
+	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(userPath), providerUserID, permissionPath)
 
 	return getReq[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Blocked Contracts Read Methods -- */
 
-// GetBlockedContracts returns all blocked contracts - GET `<base URL>/v2/blocked_contract`
-func (db *DBClient) GetBlockedContracts(ctx context.Context) ([]types.BlockedContract, error) {
+// GetBlockedContracts returns all blocked contracts - GET `/v2/blocked_contract`
+func (db *DBClient) GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error) {
 	endpoint := db.v2BasePath(blockedContractPath)
 
-	return getReq[[]types.BlockedContract](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	return getReq[types.GlobalBlockedContracts](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* ------------ IDBWriter Methods ------------ */
@@ -373,7 +374,7 @@ func (db *DBClient) ActivateChain(ctx context.Context, chainID types.RelayChainI
 
 /* -- Portal App Write Methods -- */
 
-// CreatePortalApp creates a new Portal App - POST `<base URL>/v2/portal_app`
+// CreatePortalApp creates a new Portal App - POST `/v2/portal_app`
 func (db *DBClient) CreatePortalApp(ctx context.Context, portalAppInput types.PortalApp) (*types.PortalApp, error) {
 	portalAppInputJSON, err := json.Marshal(portalAppInput)
 	if err != nil {
@@ -385,7 +386,7 @@ func (db *DBClient) CreatePortalApp(ctx context.Context, portalAppInput types.Po
 	return postReq[*types.PortalApp](endpoint, db.getAuthHeaderForWrite(), portalAppInputJSON, db.httpClient)
 }
 
-// UpdatePortalApp updates an existing Portal App - PUT `<base URL>/v2/portal_app/{id}`
+// UpdatePortalApp updates an existing Portal App - PUT `/v2/portal_app/{id}`
 func (db *DBClient) UpdatePortalApp(ctx context.Context, portalAppUpdate types.UpdatePortalApp) (*types.UpdatePortalApp, error) {
 	portalAppUpdateJSON, err := json.Marshal(portalAppUpdate)
 	if err != nil {
@@ -397,21 +398,28 @@ func (db *DBClient) UpdatePortalApp(ctx context.Context, portalAppUpdate types.U
 	return putReq[*types.UpdatePortalApp](endpoint, db.getAuthHeaderForWrite(), portalAppUpdateJSON, db.httpClient)
 }
 
-// DeletePortalApp deletes a Portal App - DELETE `<base URL>/v2/portal_app/{id}`
-func (db *DBClient) DeletePortalApp(ctx context.Context, portalAppID string) (bool, error) {
+// DeletePortalApp deletes a Portal App - DELETE `/v2/portal_app/{id}`
+func (db *DBClient) DeletePortalApp(ctx context.Context, portalAppID types.PortalAppID) (map[string]string, error) {
 	if portalAppID == "" {
-		return false, errNoPortalAppID
+		return nil, errNoPortalAppID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(portalAppPath), portalAppID)
 
-	return deleteReq[bool](endpoint, db.getAuthHeaderForWrite(), db.httpClient)
+	return deleteReq[map[string]string](endpoint, db.getAuthHeaderForWrite(), db.httpClient)
 }
 
 /* -- Account Write Methods -- */
 
 // CreateAccount creates a new Account in the database for a single user - POST `/v2/user/{userID}/account`
 func (db *DBClient) CreateAccount(ctx context.Context, userID types.UserID, account types.Account, timestamp time.Time) (*types.Account, error) {
+	if userID == "" {
+		return nil, errNoUserID
+	}
+	if account.PlanType == "" {
+		return nil, errNoPlanTypeSet
+	}
+
 	accountJSON, err := json.Marshal(account)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidAccountJSON, err)
@@ -422,7 +430,7 @@ func (db *DBClient) CreateAccount(ctx context.Context, userID types.UserID, acco
 	return postReq[*types.Account](endpoint, db.getAuthHeaderForWrite(), accountJSON, db.httpClient)
 }
 
-// UpdateAccount updates an Account in the DB - PUT `<base URL>/v2/account/{id}`
+// UpdateAccount updates an Account in the DB - PUT `/v2/account/{id}`
 func (db *DBClient) UpdateAccount(ctx context.Context, account types.UpdateAccount) (*types.Account, error) {
 	accountJSON, err := json.Marshal(account)
 	if err != nil {
@@ -434,7 +442,7 @@ func (db *DBClient) UpdateAccount(ctx context.Context, account types.UpdateAccou
 	return putReq[*types.Account](endpoint, db.getAuthHeaderForWrite(), accountJSON, db.httpClient)
 }
 
-// CreateAccountIntegration creates an AccountIntegration in the DB - POST `<base URL>/v2/account/{id}/integration`
+// CreateAccountIntegration creates an AccountIntegration in the DB - POST `/v2/account/{id}/integration`
 func (db *DBClient) CreateAccountIntegration(ctx context.Context, accountID types.AccountID, integration types.AccountIntegrations) (*types.AccountIntegrations, error) {
 	integrationJSON, err := json.Marshal(integration)
 	if err != nil {
@@ -446,7 +454,7 @@ func (db *DBClient) CreateAccountIntegration(ctx context.Context, accountID type
 	return postReq[*types.AccountIntegrations](endpoint, db.getAuthHeaderForWrite(), integrationJSON, db.httpClient)
 }
 
-// UpdateAccountIntegration updates an AccountIntegration in the DB - PUT `<base URL>/v2/account/{id}/integration`
+// UpdateAccountIntegration updates an AccountIntegration in the DB - PUT `/v2/account/{id}/integration`
 func (db *DBClient) UpdateAccountIntegration(ctx context.Context, accountID types.AccountID, integration types.AccountIntegrations) (*types.AccountIntegrations, error) {
 	integrationJSON, err := json.Marshal(integration)
 	if err != nil {
@@ -458,42 +466,42 @@ func (db *DBClient) UpdateAccountIntegration(ctx context.Context, accountID type
 	return putReq[*types.AccountIntegrations](endpoint, db.getAuthHeaderForWrite(), integrationJSON, db.httpClient)
 }
 
-// DeleteAccount deletes an Account in the DB - DELETE `<base URL>/v2/account/{id}`
-func (db *DBClient) DeleteAccount(ctx context.Context, accountID types.AccountID) (bool, error) {
+// DeleteAccount deletes an Account in the DB - DELETE `/v2/account/{id}`
+func (db *DBClient) DeleteAccount(ctx context.Context, accountID types.AccountID) (map[string]string, error) {
 	if accountID == "" {
-		return false, errNoAccountID
+		return nil, errNoAccountID
 	}
 
 	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(accountPath), accountID)
 
-	return deleteReq[bool](endpoint, db.getAuthHeaderForWrite(), db.httpClient)
+	return deleteReq[map[string]string](endpoint, db.getAuthHeaderForWrite(), db.httpClient)
 }
 
 /* -- Account User Write Methods -- */
 
 // WriteAccountUser creates a single Account User - POST `/v2/account/user`
-func (db *DBClient) WriteAccountUser(ctx context.Context, createUser types.CreateAccountUserAccess, time time.Time) (types.UserID, error) {
+func (db *DBClient) WriteAccountUser(ctx context.Context, createUser types.CreateAccountUserAccess, time time.Time) (map[string]types.UserID, error) {
 	if createUser.AccountID == "" {
-		return "", errNoAccountID
+		return nil, errNoAccountID
 	}
 	if createUser.PortalAppID == "" {
-		return "", errNoPortalAppID
+		return nil, errNoPortalAppID
 	}
 	if createUser.Email == "" {
-		return "", errNoEmail
+		return nil, errNoEmail
 	}
 	if createUser.RoleName == "" {
-		return "", errNoRoleName
+		return nil, errNoRoleName
 	}
 
 	createUserJSON, err := json.Marshal(createUser)
 	if err != nil {
-		return "", fmt.Errorf("invalid createUser JSON: %w", err)
+		return nil, fmt.Errorf("invalid createUser JSON: %w", err)
 	}
 
 	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(accountPath), userPath)
 
-	return postReq[types.UserID](endpoint, db.getAuthHeaderForWrite(), createUserJSON, db.httpClient)
+	return postReq[map[string]types.UserID](endpoint, db.getAuthHeaderForWrite(), createUserJSON, db.httpClient)
 }
 
 // SetAccountUserRole updates the role for a single Account User - PUT `/v2/account/user/update_role`
@@ -572,6 +580,10 @@ func (db *DBClient) RemoveAccountUser(ctx context.Context, removeUser types.Upda
 
 // CreateUser creates a new User in the database - POST `/v2/user`
 func (db *DBClient) CreateUser(ctx context.Context, user types.CreateUser) (*types.CreateUserResponse, error) {
+	if user.Email == "" {
+		return nil, errNoEmail
+	}
+
 	userJSON, err := json.Marshal(user)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user JSON: %w", err)
@@ -595,7 +607,7 @@ func (db *DBClient) DeleteUser(ctx context.Context, userID types.UserID) (map[st
 
 /* -- Blocked Contracts Write Methods -- */
 
-// WriteBlockedContract adds a new blocked address to the global blocked contracts - POST `<base URL>/v2/blocked_contract`
+// WriteBlockedContract adds a new blocked address to the global blocked contracts - POST `/v2/blocked_contract`
 func (db *DBClient) WriteBlockedContract(ctx context.Context, blockedContract types.BlockedContract) (map[string]string, error) {
 	blockedContractJSON, err := json.Marshal(blockedContract)
 	if err != nil {
@@ -607,7 +619,7 @@ func (db *DBClient) WriteBlockedContract(ctx context.Context, blockedContract ty
 	return postReq[map[string]string](endpoint, db.getAuthHeaderForWrite(), blockedContractJSON, db.httpClient)
 }
 
-// UpdateBlockedContractActive updates the active status of a blocked contract - PUT `<base URL>/v2/blocked_contract/{address}/active`
+// UpdateBlockedContractActive updates the active status of a blocked contract - PUT `/v2/blocked_contract/{address}/active`
 func (db *DBClient) UpdateBlockedContractActive(ctx context.Context, address types.BlockedAddress, isActive bool) (map[string]bool, error) {
 	if address == "" {
 		return nil, errNoBlockedAddress
@@ -629,7 +641,7 @@ func (db *DBClient) UpdateBlockedContractActive(ctx context.Context, address typ
 	return putReq[map[string]bool](endpoint, db.getAuthHeaderForWrite(), activeStatusJSON, db.httpClient)
 }
 
-// RemoveBlockedContract deletes a blocked address from the global blocked contracts - DELETE `<base URL>/v2/blocked_contract/{address}`
+// RemoveBlockedContract deletes a blocked address from the global blocked contracts - DELETE `/v2/blocked_contract/{address}`
 func (db *DBClient) RemoveBlockedContract(ctx context.Context, address types.BlockedAddress) (map[string]string, error) {
 	if address == "" {
 		return nil, errNoBlockedAddress

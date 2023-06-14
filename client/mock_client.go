@@ -176,14 +176,16 @@ func (_m *MockIDBClient) CreateUser(ctx context.Context, user types.CreateUser) 
 }
 
 // DeleteAccount provides a mock function with given fields: ctx, accountID
-func (_m *MockIDBClient) DeleteAccount(ctx context.Context, accountID types.AccountID) (bool, error) {
+func (_m *MockIDBClient) DeleteAccount(ctx context.Context, accountID types.AccountID) (map[string]string, error) {
 	ret := _m.Called(ctx, accountID)
 
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, types.AccountID) bool); ok {
+	var r0 map[string]string
+	if rf, ok := ret.Get(0).(func(context.Context, types.AccountID) map[string]string); ok {
 		r0 = rf(ctx, accountID)
 	} else {
-		r0 = ret.Get(0).(bool)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]string)
+		}
 	}
 
 	var r1 error
@@ -197,18 +199,20 @@ func (_m *MockIDBClient) DeleteAccount(ctx context.Context, accountID types.Acco
 }
 
 // DeletePortalApp provides a mock function with given fields: ctx, portalAppID
-func (_m *MockIDBClient) DeletePortalApp(ctx context.Context, portalAppID string) (bool, error) {
+func (_m *MockIDBClient) DeletePortalApp(ctx context.Context, portalAppID types.PortalAppID) (map[string]string, error) {
 	ret := _m.Called(ctx, portalAppID)
 
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+	var r0 map[string]string
+	if rf, ok := ret.Get(0).(func(context.Context, types.PortalAppID) map[string]string); ok {
 		r0 = rf(ctx, portalAppID)
 	} else {
-		r0 = ret.Get(0).(bool)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]string)
+		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, types.PortalAppID) error); ok {
 		r1 = rf(ctx, portalAppID)
 	} else {
 		r1 = ret.Error(1)
@@ -264,15 +268,15 @@ func (_m *MockIDBClient) GetAccountByID(ctx context.Context, accountID types.Acc
 }
 
 // GetAccountsByUser provides a mock function with given fields: ctx, userID
-func (_m *MockIDBClient) GetAccountsByUser(ctx context.Context, userID types.UserID) ([]types.Account, error) {
+func (_m *MockIDBClient) GetAccountsByUser(ctx context.Context, userID types.UserID) ([]*types.Account, error) {
 	ret := _m.Called(ctx, userID)
 
-	var r0 []types.Account
-	if rf, ok := ret.Get(0).(func(context.Context, types.UserID) []types.Account); ok {
+	var r0 []*types.Account
+	if rf, ok := ret.Get(0).(func(context.Context, types.UserID) []*types.Account); ok {
 		r0 = rf(ctx, userID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.Account)
+			r0 = ret.Get(0).([]*types.Account)
 		}
 	}
 
@@ -286,16 +290,39 @@ func (_m *MockIDBClient) GetAccountsByUser(ctx context.Context, userID types.Use
 	return r0, r1
 }
 
-// GetAllPortalApps provides a mock function with given fields: ctx
-func (_m *MockIDBClient) GetAllPortalApps(ctx context.Context) ([]types.PortalApp, error) {
+// GetAllChains provides a mock function with given fields: ctx
+func (_m *MockIDBClient) GetAllChains(ctx context.Context) ([]*types.Chain, error) {
 	ret := _m.Called(ctx)
 
-	var r0 []types.PortalApp
-	if rf, ok := ret.Get(0).(func(context.Context) []types.PortalApp); ok {
+	var r0 []*types.Chain
+	if rf, ok := ret.Get(0).(func(context.Context) []*types.Chain); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.PortalApp)
+			r0 = ret.Get(0).([]*types.Chain)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetAllPortalApps provides a mock function with given fields: ctx
+func (_m *MockIDBClient) GetAllPortalApps(ctx context.Context) ([]*types.PortalApp, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*types.PortalApp
+	if rf, ok := ret.Get(0).(func(context.Context) []*types.PortalApp); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*types.PortalApp)
 		}
 	}
 
@@ -310,16 +337,14 @@ func (_m *MockIDBClient) GetAllPortalApps(ctx context.Context) ([]types.PortalAp
 }
 
 // GetBlockedContracts provides a mock function with given fields: ctx
-func (_m *MockIDBClient) GetBlockedContracts(ctx context.Context) ([]types.BlockedContract, error) {
+func (_m *MockIDBClient) GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error) {
 	ret := _m.Called(ctx)
 
-	var r0 []types.BlockedContract
-	if rf, ok := ret.Get(0).(func(context.Context) []types.BlockedContract); ok {
+	var r0 types.GlobalBlockedContracts
+	if rf, ok := ret.Get(0).(func(context.Context) types.GlobalBlockedContracts); ok {
 		r0 = rf(ctx)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.BlockedContract)
-		}
+		r0 = ret.Get(0).(types.GlobalBlockedContracts)
 	}
 
 	var r1 error
@@ -356,11 +381,11 @@ func (_m *MockIDBClient) GetChainByID(ctx context.Context, chainID types.RelayCh
 }
 
 // GetPortalAppByID provides a mock function with given fields: ctx, portalAppID
-func (_m *MockIDBClient) GetPortalAppByID(ctx context.Context, portalAppID string) (*types.PortalApp, error) {
+func (_m *MockIDBClient) GetPortalAppByID(ctx context.Context, portalAppID types.PortalAppID) (*types.PortalApp, error) {
 	ret := _m.Called(ctx, portalAppID)
 
 	var r0 *types.PortalApp
-	if rf, ok := ret.Get(0).(func(context.Context, string) *types.PortalApp); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, types.PortalAppID) *types.PortalApp); ok {
 		r0 = rf(ctx, portalAppID)
 	} else {
 		if ret.Get(0) != nil {
@@ -369,7 +394,7 @@ func (_m *MockIDBClient) GetPortalAppByID(ctx context.Context, portalAppID strin
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, types.PortalAppID) error); ok {
 		r1 = rf(ctx, portalAppID)
 	} else {
 		r1 = ret.Error(1)
@@ -379,15 +404,15 @@ func (_m *MockIDBClient) GetPortalAppByID(ctx context.Context, portalAppID strin
 }
 
 // GetPortalAppsByUser provides a mock function with given fields: ctx, userID, filter
-func (_m *MockIDBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]types.PortalApp, error) {
+func (_m *MockIDBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error) {
 	ret := _m.Called(ctx, userID, filter)
 
-	var r0 []types.PortalApp
-	if rf, ok := ret.Get(0).(func(context.Context, types.UserID, types.RoleName) []types.PortalApp); ok {
+	var r0 []*types.PortalApp
+	if rf, ok := ret.Get(0).(func(context.Context, types.UserID, types.RoleName) []*types.PortalApp); ok {
 		r0 = rf(ctx, userID, filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.PortalApp)
+			r0 = ret.Get(0).([]*types.PortalApp)
 		}
 	}
 
@@ -401,13 +426,13 @@ func (_m *MockIDBClient) GetPortalAppsByUser(ctx context.Context, userID types.U
 	return r0, r1
 }
 
-// GetUserPermissionByUserID provides a mock function with given fields: ctx, userID
-func (_m *MockIDBClient) GetUserPermissionByUserID(ctx context.Context, userID types.UserID) (*types.UserPermissions, error) {
-	ret := _m.Called(ctx, userID)
+// GetUserPermissionByUserID provides a mock function with given fields: ctx, providerUserID
+func (_m *MockIDBClient) GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error) {
+	ret := _m.Called(ctx, providerUserID)
 
 	var r0 *types.UserPermissions
-	if rf, ok := ret.Get(0).(func(context.Context, types.UserID) *types.UserPermissions); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, types.ProviderUserID) *types.UserPermissions); ok {
+		r0 = rf(ctx, providerUserID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.UserPermissions)
@@ -415,8 +440,8 @@ func (_m *MockIDBClient) GetUserPermissionByUserID(ctx context.Context, userID t
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, types.UserID) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, types.ProviderUserID) error); ok {
+		r1 = rf(ctx, providerUserID)
 	} else {
 		r1 = ret.Error(1)
 	}

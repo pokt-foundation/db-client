@@ -176,14 +176,16 @@ func (_m *MockIDBWriter) CreateUser(ctx context.Context, user types.CreateUser) 
 }
 
 // DeleteAccount provides a mock function with given fields: ctx, accountID
-func (_m *MockIDBWriter) DeleteAccount(ctx context.Context, accountID types.AccountID) (bool, error) {
+func (_m *MockIDBWriter) DeleteAccount(ctx context.Context, accountID types.AccountID) (map[string]string, error) {
 	ret := _m.Called(ctx, accountID)
 
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, types.AccountID) bool); ok {
+	var r0 map[string]string
+	if rf, ok := ret.Get(0).(func(context.Context, types.AccountID) map[string]string); ok {
 		r0 = rf(ctx, accountID)
 	} else {
-		r0 = ret.Get(0).(bool)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]string)
+		}
 	}
 
 	var r1 error
@@ -197,18 +199,20 @@ func (_m *MockIDBWriter) DeleteAccount(ctx context.Context, accountID types.Acco
 }
 
 // DeletePortalApp provides a mock function with given fields: ctx, portalAppID
-func (_m *MockIDBWriter) DeletePortalApp(ctx context.Context, portalAppID string) (bool, error) {
+func (_m *MockIDBWriter) DeletePortalApp(ctx context.Context, portalAppID types.PortalAppID) (map[string]string, error) {
 	ret := _m.Called(ctx, portalAppID)
 
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+	var r0 map[string]string
+	if rf, ok := ret.Get(0).(func(context.Context, types.PortalAppID) map[string]string); ok {
 		r0 = rf(ctx, portalAppID)
 	} else {
-		r0 = ret.Get(0).(bool)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]string)
+		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, types.PortalAppID) error); ok {
 		r1 = rf(ctx, portalAppID)
 	} else {
 		r1 = ret.Error(1)
