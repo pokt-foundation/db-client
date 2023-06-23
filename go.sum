@@ -5,8 +5,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pokt-foundation/portal-db v1.10.8 h1:YvTDrVc+P5NXk5NKk1zaoIHsWfsXsG1dWp3X5fa8K/A=
 github.com/pokt-foundation/portal-db v1.10.8/go.mod h1:Pf8IIeoj3mSIk0+eNdzssz3T7GvnWRkFKPwGsFT2D5w=
-github.com/pokt-foundation/portal-db/v2 v2.0.0-beta.98 h1:nprxnrbVQoP60kibF2XHErDiyT1Imhu7XuQuMddAarY=
-github.com/pokt-foundation/portal-db/v2 v2.0.0-beta.98/go.mod h1:htymE+vj4je428TV0ypMUXtGFB2yOgskDEMe9wfZjWg=
+github.com/pokt-foundation/portal-db/v2 v2.0.0-beta.101 h1:ZEeOpK3QW5U1lq7ryrtPnTEeu2vE+yvJGKhd7N3QXVg=
+github.com/pokt-foundation/portal-db/v2 v2.0.0-beta.101/go.mod h1:htymE+vj4je428TV0ypMUXtGFB2yOgskDEMe9wfZjWg=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0 h1:1zr/of2m5FGMsad5YfcqgdqdWrIhu+EBEJRhR1U7z/c=

@@ -501,6 +501,76 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 		}
 	})
 
+	ts.Run("Test_GetPortalUserIDFromProviderUserID", func() {
+		tests := []struct {
+			name                 string
+			providerUserID       types.ProviderUserID
+			expectedPortalUserID types.UserID
+			err                  error
+		}{
+			{
+				name:                 "Should get Portal User ID for provider user_1",
+				providerUserID:       "auth0|james_holden",
+				expectedPortalUserID: "user_1",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_2",
+				providerUserID:       "auth0|paul_atreides",
+				expectedPortalUserID: "user_2",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_3",
+				providerUserID:       "auth0|ellen_ripley",
+				expectedPortalUserID: "user_3",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_4",
+				providerUserID:       "auth0|ulfric_stormcloak",
+				expectedPortalUserID: "user_4",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_5",
+				providerUserID:       "auth0|chrisjen_avasarala",
+				expectedPortalUserID: "user_5",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_6",
+				providerUserID:       "auth0|amos_burton",
+				expectedPortalUserID: "user_6",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_7",
+				providerUserID:       "auth0|frodo_baggins",
+				expectedPortalUserID: "user_7",
+			},
+			{
+				name:           "Should error when no user ID",
+				providerUserID: "",
+				err:            fmt.Errorf("no user ID"),
+			},
+			{
+				name:           "Should error when no user ID",
+				providerUserID: "",
+				err:            fmt.Errorf("no user ID"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				portalUserID, err := ts.client1.GetPortalUserIDFromProviderUserID(testCtx, test.providerUserID)
+				ts.Equal(test.err, err)
+
+				if err == nil {
+					ts.Equal(test.expectedPortalUserID, portalUserID)
+
+					portalUserID, err = ts.client2.GetPortalUserIDFromProviderUserID(testCtx, test.providerUserID)
+					ts.Equal(test.err, err)
+					ts.Equal(test.expectedPortalUserID, portalUserID)
+				}
+			})
+		}
+	})
+
 	/* ------ V2 Blocked Contracts Read Tests ------ */
 
 	ts.Run("Test_GetBlockedContracts", func() {
@@ -967,7 +1037,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 						Environment: "cascadia",
 					},
 				},
-				err: fmt.Errorf("Response not OK. 500 Internal Server Error: pq: invalid input value for enum environment: \"cascadia\""),
+				err: fmt.Errorf("Response not OK. 500 Internal Server Error: invalid portal app environment provided: cascadia"),
 			},
 			{
 				name: "Should return an error for non-existent account ID",

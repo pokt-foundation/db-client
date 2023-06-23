@@ -58,6 +58,8 @@ type (
 
 		// GetUserPermissionByUserID returns all PortalApp permissions for a given provider user ID - GET `/v2/user/{userID}/permission`
 		GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error)
+		// GetPortalUserIDFromProviderUserID returns the Portal User ID for a given auth provider user ID - GET `/v2/user/{userID}`
+		GetPortalUserIDFromProviderUserID(ctx context.Context, providerUserID types.ProviderUserID) (types.UserID, error)
 
 		// GetBlockedContracts returns all blocked contracts - GET `/v2/blocked_contract`
 		GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error)
@@ -297,6 +299,17 @@ func (db *DBClient) GetUserPermissionByUserID(ctx context.Context, providerUserI
 	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(userPath), providerUserID, permissionPath)
 
 	return getReq[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetPortalUserIDFromProviderUserID returns the Portal User ID for a given auth provider user ID - GET `/v2/user/{userID}`
+func (db *DBClient) GetPortalUserIDFromProviderUserID(ctx context.Context, providerUserID types.ProviderUserID) (types.UserID, error) {
+	if providerUserID == "" {
+		return "", errNoUserID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(userPath), providerUserID)
+
+	return getReq[types.UserID](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Blocked Contracts Read Methods -- */

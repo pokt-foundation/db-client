@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 make: gen_client gen_reader gen_writer
 
 gen_client:
@@ -10,14 +12,22 @@ gen_writer:
 
 # These targets spin up and shut down the E2E test env in docker.
 test_env_up:
-	docker-compose -f ./testdata/docker-compose.test.yml up -d --remove-orphans --build
+	@echo "🧪 Starting up PHD Client test environment ..."
+	@docker-compose -f ./testdata/docker-compose.test.yml up -d --remove-orphans --build >/dev/null
 	@echo "⏳ Waiting for test DB to be ready ..."
-	until pg_isready -h localhost -p 5432 -U postgres -d postgres >/dev/null 2>&1; do sleep 0.01; done
-	@echo "🚀 Test environment is up ..."
+	@attempts=0; until pg_isready -h localhost -p 5432 -U postgres -d postgres >/dev/null || [[ $$attempts -eq 5 ]]; do sleep 2; ((attempts++)); done
+	@[[ $$attempts -lt 5 ]] && echo "🐘 Test Portal DB is up ..." || (echo "❌ Test Portal DB failed to start" && make test_env_down >/dev/null && exit 1)
+	@echo "⏳ Performing health check on pocket-http-db-1 ..."
+	@attempts=0; until curl -s http://localhost:8080/healthz >/dev/null || [[ $$attempts -eq 5 ]]; do sleep 2; ((attempts++)); done
+	@[[ $$attempts -lt 5 ]] && echo "🖥️  pocket-http-db-1 is online ..." || (echo "❌ pocket-http-db-1 failed health check" && make test_env_down >/dev/null && exit 1)
+	@echo "⏳ Performing health check on pocket-http-db-2 ..."
+	@attempts=0; until curl -s http://localhost:8081/healthz >/dev/null || [[ $$attempts -eq 5 ]]; do sleep 2; ((attempts++)); done
+	@[[ $$attempts -lt 5 ]] && echo "🖥️  pocket-http-db-2 is online ..." || (echo "❌ pocket-http-db-2 failed health check" && make test_env_down >/dev/null && exit 1)
+	@echo "🚀 Test environment is up!"
 test_env_down:
-	docker-compose -f ./testdata/docker-compose.test.yml down --remove-orphans -v
+	@echo "🧪 Shutting down PHD Client test environment ..."
+	@docker-compose -f ./testdata/docker-compose.test.yml down --remove-orphans >/dev/null
 	@echo "✅ Test environment is down."
-
 
 run_tests:
 	-go test ./... -count=1;
