@@ -544,9 +544,9 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				expectedPortalUserID: "user_7",
 			},
 			{
-				name:           "Should error when no user ID",
-				providerUserID: "",
-				err:            fmt.Errorf("no user ID"),
+				name:           "Should error when user does not exist",
+				providerUserID: "facebook|ron_swanson",
+				err:            fmt.Errorf("Response not OK. 404 Not Found"),
 			},
 			{
 				name:           "Should error when no user ID",
