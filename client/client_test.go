@@ -986,8 +986,8 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 						SecretKey:         "test_3e3fb7949c9e3b193cfba5348f93bb2f",
 						SecretKeyRequired: true,
 					},
-					AATs: map[types.AATID]types.AAT{
-						5: testdata.TestCreatePortalAppAAT,
+					AATs: map[types.ProtocolAppID]types.AAT{
+						"test_protocol_app_5": testdata.TestCreatePortalAppAAT,
 					},
 					Notifications: map[types.NotificationType]types.AppNotification{
 						types.NotificationTypeEmail: {
@@ -1001,13 +1001,13 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 							},
 						},
 					},
-					CreatedAt: testdata.MockTimestamp,
-					UpdatedAt: testdata.MockTimestamp,
+					FirstDateSurpassed: testdata.MockTimestamp,
+					CreatedAt:          testdata.MockTimestamp,
+					UpdatedAt:          testdata.MockTimestamp,
 					LegacyFields: types.LegacyFields{
-						PlanType:           types.FreetierV0,
-						DailyLimit:         250_000,
-						RequestTimeout:     15_000,
-						FirstDateSurpassed: testdata.MockTimestamp,
+						PlanType:       types.FreetierV0,
+						DailyLimit:     250_000,
+						RequestTimeout: 15_000,
 					},
 				},
 			},
@@ -1071,7 +1071,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				test.portalAppInput.AATs = map[types.AATID]types.AAT{
+				test.portalAppInput.AATs = map[types.ProtocolAppID]types.AAT{
 					test.aatInput.ID: test.aatInput,
 				}
 				createdPortalApp, err := ts.client1.CreatePortalApp(testCtx, *test.portalAppInput)
@@ -1088,10 +1088,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					test.expected.ID = createdPortalApp.ID
 					createdPortalApp.CreatedAt = timestamp
 					createdPortalApp.UpdatedAt = timestamp
-					aat := test.expected.AATs[5]
-					aat.ID = 5
+					aat := test.expected.AATs["test_protocol_app_5"]
+					aat.ID = createdPortalApp.AAT().ID
 					aat.PrivateKey = ""
-					test.expected.AATs[5] = aat
+					test.expected.AATs[createdPortalApp.AAT().ID] = aat
+					delete(test.expected.AATs, "test_protocol_app_5")
 
 					ts.Equal(test.expected, createdPortalApp)
 
@@ -1413,6 +1414,53 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					portalApp, err = ts.client2.GetPortalAppByID(testCtx, createdPortalApp.ID)
 					ts.Equal(test.err, err)
 					ts.Nil(portalApp)
+				}
+			})
+		}
+	})
+
+	ts.Run("Test_UpdatePortalAppsFirstDateSurpassed", func() {
+		tests := []struct {
+			name                     string
+			firstDateSurpassedUpdate types.UpdateFirstDateSurpassed
+			err                      error
+			expected                 map[string]string
+		}{
+			{
+				name: "Should update FirstDateSurpassed field for a given list of Portal apps in the DB",
+				firstDateSurpassedUpdate: types.UpdateFirstDateSurpassed{
+					PortalAppIDs:       []types.PortalAppID{"test_app_1", "test_app_2"},
+					FirstDateSurpassed: testdata.MockTimestamp,
+				},
+				expected: map[string]string{"status": "updated"},
+			},
+			{
+				name: "Should return an error if no app IDs provided",
+				firstDateSurpassedUpdate: types.UpdateFirstDateSurpassed{
+					PortalAppIDs:       []types.PortalAppID{},
+					FirstDateSurpassed: testdata.MockTimestamp,
+				},
+				err: fmt.Errorf("Response not OK. 400 Bad Request"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				result, err := ts.client1.UpdatePortalAppsFirstDateSurpassed(testCtx, test.firstDateSurpassedUpdate)
+				ts.Equal(test.err, err)
+
+				if test.err == nil {
+					ts.Equal(test.expected, result)
+
+					for _, appID := range test.firstDateSurpassedUpdate.PortalAppIDs {
+						portalApp, err := ts.client1.GetPortalAppByID(testCtx, appID)
+						ts.NoError(err)
+						ts.Equal(test.firstDateSurpassedUpdate.FirstDateSurpassed, portalApp.FirstDateSurpassed)
+
+						portalApp, err = ts.client2.GetPortalAppByID(testCtx, appID)
+						ts.NoError(err)
+						ts.Equal(test.firstDateSurpassedUpdate.FirstDateSurpassed, portalApp.FirstDateSurpassed)
+					}
 				}
 			})
 		}
