@@ -778,7 +778,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 	ts.Run("Test_UpdateChain", func() {
 		tests := []struct {
 			name        string
-			chainUpdate types.Chain
+			chainUpdate types.UpdateChain
 			noSubtables bool
 			err         error
 		}{
@@ -807,38 +807,68 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					ts.NotEmpty(chainUpdateResponse)
 
-					timestamp := chainUpdateResponse.CreatedAt
-
-					test.chainUpdate.CreatedAt = timestamp
-					test.chainUpdate.UpdatedAt = timestamp
-
-					ts.Equal(test.chainUpdate, *chainUpdateResponse)
-
 					updatedChainByID, err := ts.client1.GetChainByID(testCtx, chainUpdateResponse.ID)
 					ts.NoError(err)
-					if test.noSubtables {
-						test.chainUpdate.Altruists = updatedChainByID.Altruists
-						test.chainUpdate.Checks = updatedChainByID.Checks
-						test.chainUpdate.AliasDomains = updatedChainByID.AliasDomains
-					}
-					updatedChainByID.CreatedAt = timestamp
-					updatedChainByID.UpdatedAt = timestamp
-					ts.NotEmpty(updatedChainByID.GigastakeApps, 1)
-					updatedChainByID.GigastakeApps = nil
-					ts.Equal(test.chainUpdate, *updatedChainByID)
+					chainUpdateResponse.GigastakeApps = updatedChainByID.GigastakeApps
+					ts.Equal(chainUpdateResponse, updatedChainByID)
 
-					updatedChainByID, err = ts.client2.GetChainByID(testCtx, chainUpdateResponse.ID)
-					if test.noSubtables {
-						test.chainUpdate.Altruists = updatedChainByID.Altruists
-						test.chainUpdate.Checks = updatedChainByID.Checks
-						test.chainUpdate.AliasDomains = updatedChainByID.AliasDomains
+					expectedChain := &types.Chain{
+						// GigastakeApps are not updated by this endpoint so will always remain the same
+						GigastakeApps: updatedChainByID.GigastakeApps,
 					}
-					ts.NoError(err)
-					updatedChainByID.CreatedAt = timestamp
-					updatedChainByID.UpdatedAt = timestamp
-					ts.NotEmpty(updatedChainByID.GigastakeApps, 1)
-					updatedChainByID.GigastakeApps = nil
-					ts.Equal(test.chainUpdate, *updatedChainByID)
+
+					// Only compare the fields present in the update struct
+					if test.chainUpdate.Blockchain != nil {
+						expectedChain.Blockchain = *test.chainUpdate.Blockchain
+					}
+
+					if test.chainUpdate.Description != nil {
+						expectedChain.Description = *test.chainUpdate.Description
+					}
+
+					if test.chainUpdate.EnforceResult != nil {
+						expectedChain.EnforceResult = *test.chainUpdate.EnforceResult
+					}
+
+					if test.chainUpdate.Path != nil {
+						expectedChain.Path = *test.chainUpdate.Path
+					}
+
+					if test.chainUpdate.Ticker != nil {
+						expectedChain.Ticker = *test.chainUpdate.Ticker
+					}
+
+					if test.chainUpdate.AllowedMethods != nil {
+						expectedChain.AllowedMethods = test.chainUpdate.AllowedMethods
+					}
+
+					if test.chainUpdate.LogLimitBlocks != nil {
+						expectedChain.LogLimitBlocks = *test.chainUpdate.LogLimitBlocks
+					}
+
+					if test.chainUpdate.RequestTimeout != nil {
+						expectedChain.RequestTimeout = *test.chainUpdate.RequestTimeout
+					}
+
+					if test.chainUpdate.Active != nil {
+						expectedChain.Active = *test.chainUpdate.Active
+					}
+
+					if !test.noSubtables {
+						expectedChain.Altruists = *test.chainUpdate.Altruists
+						expectedChain.Checks = *test.chainUpdate.Checks
+						expectedChain.AliasDomains = *test.chainUpdate.AliasDomains
+					} else {
+						expectedChain.Altruists = updatedChainByID.Altruists
+						expectedChain.Checks = updatedChainByID.Checks
+						expectedChain.AliasDomains = updatedChainByID.AliasDomains
+					}
+
+					expectedChain.ID = updatedChainByID.ID
+					expectedChain.CreatedAt = updatedChainByID.CreatedAt
+					expectedChain.UpdatedAt = updatedChainByID.UpdatedAt
+
+					ts.Equal(expectedChain, updatedChainByID)
 				}
 			})
 		}

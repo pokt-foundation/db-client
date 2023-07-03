@@ -74,7 +74,7 @@ type (
 		// CreateGigastakeApp creates a new Gigastake app in the DB - POST `/v2/chain/gigastake`
 		CreateGigastakeApp(ctx context.Context, gigastakeAppInput types.GigastakeApp) (*types.GigastakeApp, error)
 		// UpdateChain updates an existing blockchain in the DB - PUT `/v2/chain/{id}`
-		UpdateChain(ctx context.Context, chainUpdate types.Chain) (*types.Chain, error)
+		UpdateChain(ctx context.Context, chainUpdate types.UpdateChain) (*types.Chain, error)
 		// UpdateGigastakeApp updates a Gigastake app in the DB - PUT `/v2/chain/gigastake`
 		UpdateGigastakeApp(ctx context.Context, updateGigastakeApp types.UpdateGigastakeApp) (*types.UpdateGigastakeApp, error)
 		// ActivateChain activates or deactivates a blockchain by ID in the DB - PUT `/v2/chain/{id}/activate`
@@ -362,13 +362,17 @@ func (db *DBClient) CreateGigastakeApp(ctx context.Context, gigastakeAppInput ty
 }
 
 // UpdateChain updates an existing blockchain in the DB - PUT `/v2/chain/{id}`
-func (db *DBClient) UpdateChain(ctx context.Context, chainUpdate types.Chain) (*types.Chain, error) {
+func (db *DBClient) UpdateChain(ctx context.Context, chainUpdate types.UpdateChain) (*types.Chain, error) {
+	if chainUpdate.ID == "" {
+		return nil, errNoChainID
+	}
+
 	chainUpdateJSON, err := json.Marshal(chainUpdate)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidChainJSON, err)
 	}
 
-	endpoint := db.v2BasePath(chainPath)
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(chainPath), chainUpdate.ID)
 
 	return putReq[*types.Chain](endpoint, db.getAuthHeaderForWrite(), chainUpdateJSON, db.httpClient)
 }
