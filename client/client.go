@@ -51,6 +51,8 @@ type (
 		// GetPortalAppsByUser fetches all portal applications - GET `/v2/user/{userID}/portal_app`
 		GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error)
 
+		// GetAllAccounts returns all Accounts - GET `/v2/account`
+		GetAllAccounts(ctx context.Context) ([]*types.Account, error)
 		// GetAccountByID returns a single Account by its account ID - GET `/v2/account/{id}`
 		GetAccountByID(ctx context.Context, accountID types.AccountID) (*types.Account, error)
 		// GetAccountsByUser returns all accounts for a given user ID - GET `/v2/user/{userID}/account`
@@ -268,6 +270,13 @@ func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID
 }
 
 /* -- Account Read Methods -- */
+
+// GetAllAccounts returns all Accounts - GET `/v2/account`
+func (db *DBClient) GetAllAccounts(ctx context.Context) ([]*types.Account, error) {
+	endpoint := db.v2BasePath(accountPath)
+
+	return getReq[[]*types.Account](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
 
 // GetAccountByID returns a single Account by its account ID - GET `/v2/account/{id}`
 func (db *DBClient) GetAccountByID(ctx context.Context, accountID types.AccountID) (*types.Account, error) {
