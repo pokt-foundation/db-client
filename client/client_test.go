@@ -815,13 +815,10 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					updatedChains := []*types.Chain{updatedChainByID1, updatedChainByID2}
 
 					for _, updatedChain := range updatedChains {
-
-						chainUpdateResponse.GigastakeApps = updatedChain.GigastakeApps
 						ts.Equal(chainUpdateResponse, updatedChain)
 
 						expectedChain := &types.Chain{
-							// GigastakeApps are not updated by this endpoint so will always remain the same
-							GigastakeApps: updatedChain.GigastakeApps,
+							GigastakeApps: chainUpdateResponse.GigastakeApps,
 						}
 
 						// Only compare the fields present in the update struct
