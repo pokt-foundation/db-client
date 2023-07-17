@@ -807,68 +807,76 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					ts.NotEmpty(chainUpdateResponse)
 
-					updatedChainByID, err := ts.client1.GetChainByID(testCtx, chainUpdateResponse.ID)
+					updatedChainByID1, err := ts.client1.GetChainByID(testCtx, chainUpdateResponse.ID)
 					ts.NoError(err)
-					chainUpdateResponse.GigastakeApps = updatedChainByID.GigastakeApps
-					ts.Equal(chainUpdateResponse, updatedChainByID)
+					updatedChainByID2, err := ts.client2.GetChainByID(testCtx, chainUpdateResponse.ID)
+					ts.NoError(err)
 
-					expectedChain := &types.Chain{
-						// GigastakeApps are not updated by this endpoint so will always remain the same
-						GigastakeApps: updatedChainByID.GigastakeApps,
+					updatedChains := []*types.Chain{updatedChainByID1, updatedChainByID2}
+
+					for _, updatedChain := range updatedChains {
+
+						chainUpdateResponse.GigastakeApps = updatedChain.GigastakeApps
+						ts.Equal(chainUpdateResponse, updatedChain)
+
+						expectedChain := &types.Chain{
+							// GigastakeApps are not updated by this endpoint so will always remain the same
+							GigastakeApps: updatedChain.GigastakeApps,
+						}
+
+						// Only compare the fields present in the update struct
+						if test.chainUpdate.Blockchain != nil {
+							expectedChain.Blockchain = *test.chainUpdate.Blockchain
+						}
+
+						if test.chainUpdate.Description != nil {
+							expectedChain.Description = *test.chainUpdate.Description
+						}
+
+						if test.chainUpdate.EnforceResult != nil {
+							expectedChain.EnforceResult = *test.chainUpdate.EnforceResult
+						}
+
+						if test.chainUpdate.Path != nil {
+							expectedChain.Path = *test.chainUpdate.Path
+						}
+
+						if test.chainUpdate.Ticker != nil {
+							expectedChain.Ticker = *test.chainUpdate.Ticker
+						}
+
+						if test.chainUpdate.AllowedMethods != nil {
+							expectedChain.AllowedMethods = test.chainUpdate.AllowedMethods
+						}
+
+						if test.chainUpdate.LogLimitBlocks != nil {
+							expectedChain.LogLimitBlocks = *test.chainUpdate.LogLimitBlocks
+						}
+
+						if test.chainUpdate.RequestTimeout != nil {
+							expectedChain.RequestTimeout = *test.chainUpdate.RequestTimeout
+						}
+
+						if test.chainUpdate.Active != nil {
+							expectedChain.Active = *test.chainUpdate.Active
+						}
+
+						if !test.noSubtables {
+							expectedChain.Altruists = *test.chainUpdate.Altruists
+							expectedChain.Checks = *test.chainUpdate.Checks
+							expectedChain.AliasDomains = *test.chainUpdate.AliasDomains
+						} else {
+							expectedChain.Altruists = updatedChain.Altruists
+							expectedChain.Checks = updatedChain.Checks
+							expectedChain.AliasDomains = updatedChain.AliasDomains
+						}
+
+						expectedChain.ID = updatedChain.ID
+						expectedChain.CreatedAt = updatedChain.CreatedAt
+						expectedChain.UpdatedAt = updatedChain.UpdatedAt
+
+						ts.Equal(expectedChain, updatedChain)
 					}
-
-					// Only compare the fields present in the update struct
-					if test.chainUpdate.Blockchain != nil {
-						expectedChain.Blockchain = *test.chainUpdate.Blockchain
-					}
-
-					if test.chainUpdate.Description != nil {
-						expectedChain.Description = *test.chainUpdate.Description
-					}
-
-					if test.chainUpdate.EnforceResult != nil {
-						expectedChain.EnforceResult = *test.chainUpdate.EnforceResult
-					}
-
-					if test.chainUpdate.Path != nil {
-						expectedChain.Path = *test.chainUpdate.Path
-					}
-
-					if test.chainUpdate.Ticker != nil {
-						expectedChain.Ticker = *test.chainUpdate.Ticker
-					}
-
-					if test.chainUpdate.AllowedMethods != nil {
-						expectedChain.AllowedMethods = test.chainUpdate.AllowedMethods
-					}
-
-					if test.chainUpdate.LogLimitBlocks != nil {
-						expectedChain.LogLimitBlocks = *test.chainUpdate.LogLimitBlocks
-					}
-
-					if test.chainUpdate.RequestTimeout != nil {
-						expectedChain.RequestTimeout = *test.chainUpdate.RequestTimeout
-					}
-
-					if test.chainUpdate.Active != nil {
-						expectedChain.Active = *test.chainUpdate.Active
-					}
-
-					if !test.noSubtables {
-						expectedChain.Altruists = *test.chainUpdate.Altruists
-						expectedChain.Checks = *test.chainUpdate.Checks
-						expectedChain.AliasDomains = *test.chainUpdate.AliasDomains
-					} else {
-						expectedChain.Altruists = updatedChainByID.Altruists
-						expectedChain.Checks = updatedChainByID.Checks
-						expectedChain.AliasDomains = updatedChainByID.AliasDomains
-					}
-
-					expectedChain.ID = updatedChainByID.ID
-					expectedChain.CreatedAt = updatedChainByID.CreatedAt
-					expectedChain.UpdatedAt = updatedChainByID.UpdatedAt
-
-					ts.Equal(expectedChain, updatedChainByID)
 				}
 			})
 		}
