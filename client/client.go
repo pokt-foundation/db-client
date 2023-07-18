@@ -63,6 +63,9 @@ type (
 		// GetPortalUserIDFromProviderUserID returns the Portal User ID for a given auth provider user ID - GET `/v2/user/{userID}`
 		GetPortalUserIDFromProviderUserID(ctx context.Context, providerUserID types.ProviderUserID) (types.UserID, error)
 
+		// GetAllPlans returns all plans - GET `/v2/plan`
+		GetAllPlans(ctx context.Context) ([]types.Plan, error)
+
 		// GetBlockedContracts returns all blocked contracts - GET `/v2/blocked_contract`
 		GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error)
 	}
@@ -132,6 +135,7 @@ const (
 	portalAppPath       basePath = "portal_app"
 	accountPath         basePath = "account"
 	userPath            basePath = "user"
+	planPath            basePath = "plan"
 	blockedContractPath basePath = "blocked_contract"
 
 	gigastakePath      subPath = "gigastake"
@@ -322,6 +326,15 @@ func (db *DBClient) GetPortalUserIDFromProviderUserID(ctx context.Context, provi
 	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(userPath), providerUserID)
 
 	return getReq[types.UserID](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+/* -- Blocked Contracts Read Methods -- */
+
+// GetAllPlans returns all plans - GET `/v2/plan`
+func (db *DBClient) GetAllPlans(ctx context.Context) ([]types.Plan, error) {
+	endpoint := db.v2BasePath(planPath)
+
+	return getReq[[]types.Plan](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Blocked Contracts Read Methods -- */

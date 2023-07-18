@@ -599,6 +599,37 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 		}
 	})
 
+	/* ------ V2 Plans Read Tests ------ */
+
+	ts.Run("Test_GetAllPlans", func() {
+		tests := []struct {
+			name     string
+			expected map[types.PayPlanType]*types.Plan
+			err      error
+		}{
+			{
+				name:     "Should get all plans",
+				expected: testdata.PayPlans,
+				err:      nil,
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				plans, err := ts.client1.GetAllPlans(testCtx)
+				ts.Equal(test.err, err)
+
+				if err == nil {
+					ts.Equal(derefPlansMap(test.expected), convertPlansToMap(plans))
+
+					plans, err = ts.client2.GetAllPlans(testCtx)
+					ts.Equal(test.err, err)
+					ts.Equal(derefPlansMap(test.expected), convertPlansToMap(plans))
+				}
+			})
+		}
+	})
+
 	/* ------ V2 Blocked Contracts Read Tests ------ */
 
 	ts.Run("Test_GetBlockedContracts", func() {
@@ -2779,6 +2810,22 @@ func convertAccountsToMap(accounts []*types.Account) map[types.AccountID]*types.
 		accountMap[account.ID] = account
 	}
 	return accountMap
+}
+
+func convertPlansToMap(plans []types.Plan) map[types.PayPlanType]types.Plan {
+	planMap := make(map[types.PayPlanType]types.Plan)
+	for _, plan := range plans {
+		planMap[plan.Type] = plan
+	}
+	return planMap
+}
+
+func derefPlansMap(plans map[types.PayPlanType]*types.Plan) map[types.PayPlanType]types.Plan {
+	planMap := make(map[types.PayPlanType]types.Plan)
+	for _, plan := range plans {
+		planMap[plan.Type] = *plan
+	}
+	return planMap
 }
 
 /* ---------- Test Suite Util Interfaces ---------- */
