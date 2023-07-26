@@ -51,6 +51,9 @@ type (
 		// GetPortalAppsByUser fetches all portal applications - GET `/v2/user/{userID}/portal_app`
 		GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error)
 
+		// GetPortalAppsForMiddleware returns all Portal Apps - GET `/v2/middleware/portal_app`
+		GetPortalAppsForMiddleware(ctx context.Context) ([]*types.PortalAppLite, error)
+
 		// GetAllAccounts returns all Accounts - GET `/v2/account`
 		GetAllAccounts(ctx context.Context) ([]*types.Account, error)
 		// GetAccountByID returns a single Account by its account ID - GET `/v2/account/{id}`
@@ -137,6 +140,7 @@ const (
 	userPath            basePath = "user"
 	planPath            basePath = "plan"
 	blockedContractPath basePath = "blocked_contract"
+	middlewarePath      basePath = "middleware"
 
 	gigastakePath      subPath = "gigastake"
 	activatePath       subPath = "activate"
@@ -273,6 +277,13 @@ func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID
 	return getReq[[]*types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
+// GetPortalAppsForMiddleware returns all Portal Apps - GET `/v2/middleware/portal_app`
+func (db *DBClient) GetPortalAppsForMiddleware(ctx context.Context) ([]*types.PortalAppLite, error) {
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(middlewarePath), portalAppPath)
+
+	return getReq[[]*types.PortalAppLite](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
 /* -- Account Read Methods -- */
 
 // GetAllAccounts returns all Accounts - GET `/v2/account`
@@ -328,7 +339,7 @@ func (db *DBClient) GetPortalUserIDFromProviderUserID(ctx context.Context, provi
 	return getReq[types.UserID](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-/* -- Blocked Contracts Read Methods -- */
+/* -- Plans Read Methods -- */
 
 // GetAllPlans returns all plans - GET `/v2/plan`
 func (db *DBClient) GetAllPlans(ctx context.Context) ([]types.Plan, error) {
