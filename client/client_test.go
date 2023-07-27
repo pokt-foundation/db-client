@@ -84,73 +84,32 @@ func Test_V1_E2E_PocketHTTPDBTestSuite(t *testing.T) {
 // Runs all the read-only endpoint tests first to compare to test DB seed data only
 // ie. not yet including data written to the test DB by the test suite
 func (ts *phdE2EReadTestSuite) Test_ReadTests() {
-
-	/* ------ V2 Chain Read Tests ------ */
-
-	ts.Run("Test_GetChainByID", func() {
-		tests := []struct {
-			name          string
-			chainID       v2Types.RelayChainID
-			err           error
-			expectedChain *v2Types.Chain
-			gigastakeApp  *v2Types.GigastakeApp
-		}{
-			{
-				name:          "Should get chain by ID",
-				chainID:       "0001",
-				expectedChain: testdata.Chains["0001"],
-				gigastakeApp:  testdata.GigastakeApps["test_gigastake_app_1"],
-			},
-			{
-				name:    "Should return error if chain ID is empty",
-				chainID: "",
-				err:     fmt.Errorf("no chain ID"),
-			},
-			{
-				name:    "Should return error if chain does not exist",
-				chainID: "9999",
-				err:     fmt.Errorf("Response not OK. 404 Not Found: blockchain not found"),
-			},
-		}
-
-		for _, test := range tests {
-			ts.Run(test.name, func() {
-				got, err := ts.client1.GetChainByID(testCtx, test.chainID)
-				ts.Equal(test.err, err)
-
-				if err == nil {
-					// Assign GigastakeApp to the chain's GigastakeApps
-					test.expectedChain.GigastakeApps = make(map[v2Types.ProtocolAppID]*v2Types.GigastakeApp)
-					test.expectedChain.GigastakeApps[test.gigastakeApp.AATID] = test.gigastakeApp
-
-					// Compare the expectedChain and actual
-					ts.Equal(test.expectedChain, got)
-				}
-			})
-		}
-	})
-
-	/* ------ V1 Read Tests ------ */
-
 	ts.Run("Test_GetBlockchains", func() {
 		tests := []struct {
 			name                string
 			expectedBlockchains map[string]*v1Types.Blockchain
+			includeInactive     bool
 			err                 error
 		}{
 			{
-				name:                "Should fetch all blockchains in the database",
+				name:                "Should fetch all active blockchains in the database",
+				expectedBlockchains: filterActiveBlockchains(expectedLegacyBlockchains),
+				includeInactive:     false,
+			},
+			{
+				name:                "Should fetch all blockchains in the database including inactive",
 				expectedBlockchains: expectedLegacyBlockchains,
+				includeInactive:     true,
 			},
 		}
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				blockchains, err := ts.client1.GetBlockchains(testCtx)
+				blockchains, err := ts.client1.GetBlockchains(testCtx, test.includeInactive)
 				ts.ErrorIs(test.err, err)
 				ts.Equal(test.expectedBlockchains, blockchainsToMap(blockchains))
 
-				blockchains, err = ts.client2.GetBlockchains(testCtx)
+				blockchains, err = ts.client2.GetBlockchains(testCtx, test.includeInactive)
 				ts.NoError(err)
 				ts.Equal(test.expectedBlockchains, blockchainsToMap(blockchains))
 			})
@@ -263,12 +222,12 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 			{
 				name: "Should fetch all load balancers in the database",
 				expectedLoadBalancers: map[string]*v1Types.LoadBalancer{
-					"test_app_1":  expectedLegacyLoadBalancers["test_app_1"],
-					"test_app_2":  expectedLegacyLoadBalancers["test_app_2"],
-					"test_app_3":  expectedLegacyLoadBalancers["test_app_3"],
-					"legacy_lb_1": expectedLegacyLoadBalancers["legacy_lb_1"],
-					"legacy_lb_2": expectedLegacyLoadBalancers["legacy_lb_2"],
-					"legacy_lb_3": expectedLegacyLoadBalancers["legacy_lb_3"],
+					"test_app_1":               expectedLegacyLoadBalancers["test_app_1"],
+					"test_app_2":               expectedLegacyLoadBalancers["test_app_2"],
+					"test_app_3":               expectedLegacyLoadBalancers["test_app_3"],
+					"0001-POKT-pokt-mainnet":   expectedLegacyLoadBalancers["0001-POKT-pokt-mainnet"],
+					"0053-OP-optimism-mainnet": expectedLegacyLoadBalancers["0053-OP-optimism-mainnet"],
+					"0040-HMY-harmony-0":       expectedLegacyLoadBalancers["0040-HMY-harmony-0"],
 				},
 			},
 		}
@@ -631,14 +590,13 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					ts.Equal(test.newChainInput.Chain, createdChain)
 					for _, expectedApp := range test.newChainInput.GigastakeApps {
+						expectedApp.ID = createdChainResp.GigastakeApps[0].ID
+						expectedApp.ChainIDs = map[v2Types.RelayChainID]struct{}{
+							test.newChainInput.Chain.ID: {},
+						}
 						expectedApp.CreatedAt = timestamp
 						expectedApp.UpdatedAt = timestamp
-						for _, createdApp := range createdGigastakeApps {
-							expectedApp.AATID = createdApp.AATID
-							expectedApp.ChainID = createdApp.ChainID
-							expectedApp.AAT.ID = createdApp.AATID
-							ts.Equal(test.newChainInput.GigastakeApps, createdGigastakeApps)
-						}
+						ts.Equal(test.newChainInput.GigastakeApps, createdGigastakeApps)
 					}
 
 					createdChainByID, err := ts.client1.GetChainByID(testCtx, createdChain.ID)
@@ -682,85 +640,33 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 				if err == nil {
 					<-time.After(50 * time.Millisecond)
+
+					ts.NotEmpty(createdGigastakeApp.ID)
+
 					timestamp := createdGigastakeApp.CreatedAt
 
-					// Ensure timestamps are the same before comparing
+					// Ensure ID and timestamps are the same before comparing
+					test.expected.ID = createdGigastakeApp.ID
 					test.expected.CreatedAt = timestamp
 					test.expected.UpdatedAt = timestamp
-					test.expected.AATID = createdGigastakeApp.AATID
-					test.expected.AAT.ID = createdGigastakeApp.AATID
-					test.expected.AAT.PrivateKey = ""
+					test.expected.PrivateKey = ""
 
 					ts.Equal(test.expected, createdGigastakeApp)
-				}
-			})
-		}
-	})
 
-	ts.Run("Test_UpdateChain", func() {
-		tests := []struct {
-			name        string
-			chainUpdate v2Types.Chain
-			noSubtables bool
-			err         error
-		}{
-			{
-				name:        "Should update the blockchain in the DB",
-				chainUpdate: testdata.UpdateChainOne,
-			},
-			{
-				name:        "Should update the blockchain again in the DB",
-				chainUpdate: testdata.UpdateChainTwo,
-			},
-			{
-				name:        "Should update the blockchain a third time in the DB without removing any subtables",
-				chainUpdate: testdata.UpdateChainThree,
-				noSubtables: true, // When no subtables are passed in the update do not modify the subtables of the expected chain
-			},
-		}
+					// Check the GigastakeApp is included in each chain
+					for chainID := range test.gigastakeAppInput.ChainIDs {
+						chain, err := ts.client1.GetChainByID(testCtx, chainID)
+						ts.NoError(err)
+						chain.GigastakeApps[test.expected.ID].CreatedAt = timestamp
+						chain.GigastakeApps[test.expected.ID].UpdatedAt = timestamp
+						ts.Equal(test.expected, chain.GigastakeApps[test.expected.ID])
 
-		for _, test := range tests {
-			ts.Run(test.name, func() {
-				chainUpdateResponse, err := ts.client1.UpdateChain(testCtx, test.chainUpdate)
-				ts.Equal(test.err, err)
-
-				if test.err == nil {
-					<-time.After(50 * time.Millisecond)
-
-					ts.NotEmpty(chainUpdateResponse)
-
-					timestamp := chainUpdateResponse.CreatedAt
-
-					test.chainUpdate.CreatedAt = timestamp
-					test.chainUpdate.UpdatedAt = timestamp
-
-					ts.Equal(test.chainUpdate, *chainUpdateResponse)
-
-					updatedChainByID, err := ts.client1.GetChainByID(testCtx, chainUpdateResponse.ID)
-					ts.NoError(err)
-					if test.noSubtables {
-						test.chainUpdate.Altruists = updatedChainByID.Altruists
-						test.chainUpdate.Checks = updatedChainByID.Checks
-						test.chainUpdate.AliasDomains = updatedChainByID.AliasDomains
+						chain, err = ts.client2.GetChainByID(testCtx, chainID)
+						ts.NoError(err)
+						chain.GigastakeApps[test.expected.ID].CreatedAt = timestamp
+						chain.GigastakeApps[test.expected.ID].UpdatedAt = timestamp
+						ts.Equal(test.expected, chain.GigastakeApps[test.expected.ID])
 					}
-					updatedChainByID.CreatedAt = timestamp
-					updatedChainByID.UpdatedAt = timestamp
-					ts.NotEmpty(updatedChainByID.GigastakeApps, 1)
-					updatedChainByID.GigastakeApps = nil
-					ts.Equal(test.chainUpdate, *updatedChainByID)
-
-					updatedChainByID, err = ts.client2.GetChainByID(testCtx, chainUpdateResponse.ID)
-					if test.noSubtables {
-						test.chainUpdate.Altruists = updatedChainByID.Altruists
-						test.chainUpdate.Checks = updatedChainByID.Checks
-						test.chainUpdate.AliasDomains = updatedChainByID.AliasDomains
-					}
-					ts.NoError(err)
-					updatedChainByID.CreatedAt = timestamp
-					updatedChainByID.UpdatedAt = timestamp
-					ts.NotEmpty(updatedChainByID.GigastakeApps, 1)
-					updatedChainByID.GigastakeApps = nil
-					ts.Equal(test.chainUpdate, *updatedChainByID)
 				}
 			})
 		}
@@ -1231,22 +1137,6 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				expectedDate:   time.Date(2022, time.November, 11, 11, 11, 11, 0, time.UTC),
 				err:            nil,
 			},
-			{
-				name: "Should fail if update contains no application IDs cannot be found",
-				update: v1Types.UpdateFirstDateSurpassed{
-					ApplicationIDs:     []string{},
-					FirstDateSurpassed: time.Date(2022, time.November, 11, 11, 11, 11, 0, time.UTC),
-				},
-				err: fmt.Errorf("Response not OK. 400 Bad Request: no application IDs on input"),
-			},
-			{
-				name: "Should fail if application cannot be found",
-				update: v1Types.UpdateFirstDateSurpassed{
-					ApplicationIDs:     []string{"9000"},
-					FirstDateSurpassed: time.Date(2022, time.November, 11, 11, 11, 11, 0, time.UTC),
-				},
-				err: fmt.Errorf("Response not OK. 400 Bad Request: UpdateFirstDateSurpassed failed: 9000 not found"),
-			},
 		}
 
 		for _, test := range tests {
@@ -1708,6 +1598,18 @@ func userAccessSliceToMap(users []v1Types.UserAccess) map[string]v1Types.UserAcc
 	return userMap
 }
 
+func filterActiveBlockchains(blockchains map[string]*v1Types.Blockchain) map[string]*v1Types.Blockchain {
+	activeBlockchains := make(map[string]*v1Types.Blockchain)
+
+	for id, blockchain := range blockchains {
+		if blockchain.Active {
+			activeBlockchains[id] = blockchain
+		}
+	}
+
+	return activeBlockchains
+}
+
 func clearTimeFields(lb *v1Types.LoadBalancer) {
 	lb.CreatedAt = time.Time{}
 	lb.UpdatedAt = time.Time{}
@@ -2021,8 +1923,8 @@ var (
 			CreatedAt: mockTimestamp,
 			UpdatedAt: mockTimestamp,
 		},
-		"legacy_lb_1": {
-			ID:        "legacy_lb_1",
+		"0001-POKT-pokt-mainnet": {
+			ID:        "0001-POKT-pokt-mainnet",
 			Gigastake: true,
 			Applications: []*v1Types.Application{
 				{
@@ -2043,8 +1945,8 @@ var (
 			CreatedAt: mockTimestamp,
 			UpdatedAt: mockTimestamp,
 		},
-		"legacy_lb_2": {
-			ID:        "legacy_lb_2",
+		"0053-OP-optimism-mainnet": {
+			ID:        "0053-OP-optimism-mainnet",
 			Gigastake: true,
 			Applications: []*v1Types.Application{
 				{
@@ -2065,8 +1967,8 @@ var (
 			CreatedAt: mockTimestamp,
 			UpdatedAt: mockTimestamp,
 		},
-		"legacy_lb_3": {
-			ID:        "legacy_lb_3",
+		"0040-HMY-harmony-0": {
+			ID:        "0040-HMY-harmony-0",
 			Gigastake: true,
 			Applications: []*v1Types.Application{
 				{
@@ -2115,7 +2017,7 @@ var (
 			BlockchainAliases: []string{"pokt-mainnet"},
 			Active:            true,
 			Redirects: []v1Types.Redirect{
-				{Alias: "pokt-mainnet", Domain: "pokt-rpc.gateway.pokt.network", LoadBalancerID: "legacy_lb_1"},
+				{Alias: "pokt-mainnet", Domain: "pokt-rpc.gateway.pokt.network", LoadBalancerID: "0001-POKT-pokt-mainnet"},
 			},
 			SyncCheckOptions: v1Types.SyncCheckOptions{
 				Body:      "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"query\"}",
@@ -2137,7 +2039,7 @@ var (
 			LogLimitBlocks:    100000,
 			Active:            true,
 			Redirects: []v1Types.Redirect{
-				{Alias: "eth-mainnet", Domain: "eth-rpc.gateway.pokt.network", LoadBalancerID: ""},
+				{Alias: "eth-mainnet", Domain: "eth-rpc.gateway.pokt.network", LoadBalancerID: "0021-ETH-eth-mainnet"},
 			},
 			SyncCheckOptions: v1Types.SyncCheckOptions{
 				Body:      "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[]}",
@@ -2156,7 +2058,7 @@ var (
 			BlockchainAliases: []string{"harmony-0"},
 			Active:            true,
 			Redirects: []v1Types.Redirect{
-				{Alias: "harmony-0", Domain: "hmy-rpc.gateway.pokt.network", LoadBalancerID: "legacy_lb_3"},
+				{Alias: "harmony-0", Domain: "hmy-rpc.gateway.pokt.network", LoadBalancerID: "0040-HMY-harmony-0"},
 			},
 			SyncCheckOptions: v1Types.SyncCheckOptions{
 				Body:      "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"hmy_blockNumber\",\"params\":[]}",
@@ -2177,7 +2079,7 @@ var (
 			LogLimitBlocks:    100000,
 			Active:            true,
 			Redirects: []v1Types.Redirect{
-				{Alias: "optimism-mainnet", Domain: "op-rpc.gateway.pokt.network", LoadBalancerID: "legacy_lb_2"},
+				{Alias: "optimism-mainnet", Domain: "op-rpc.gateway.pokt.network", LoadBalancerID: "0053-OP-optimism-mainnet"},
 			},
 			SyncCheckOptions: v1Types.SyncCheckOptions{
 				Body:      "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[]}",
@@ -2225,7 +2127,7 @@ var (
 					Version:              "0.0.1",
 				},
 				GatewaySettings:      v1Types.GatewaySettings{SecretKey: "test_40f482d91a5ef2300ebb4e2308c"},
-				Limit:                v1Types.AppLimit{PayPlan: v1Types.PayPlan{Type: "basic_plan", Limit: 1_000}, CustomLimit: 0},
+				Limit:                v1Types.AppLimit{PayPlan: v1Types.PayPlan{Type: "FREETIER_V0", Limit: 250_000}, CustomLimit: 0},
 				NotificationSettings: v1Types.NotificationSettings{SignedUp: true, Quarter: false, Half: false, ThreeQuarters: true, Full: true},
 			},
 		},

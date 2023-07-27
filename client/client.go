@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
+	types "github.com/pokt-foundation/portal-db/types"
 	v1Types "github.com/pokt-foundation/portal-db/types"
 	v2Types "github.com/pokt-foundation/portal-db/v2/types"
 )
@@ -45,7 +47,7 @@ type (
 		GetChainByID(ctx context.Context, chainID v2Types.RelayChainID) (*v2Types.Chain, error)
 
 		// GetBlockchains returns all blockchains in the DB - GET `<base URL>/<version>/blockchain`
-		GetBlockchains(ctx context.Context) ([]*v1Types.Blockchain, error)
+		GetBlockchains(ctx context.Context, includeInactive bool) ([]*v1Types.Blockchain, error)
 		// GetBlockchainByID returns a single Blockchain by its relay chain ID - GET `<base URL>/<version>/blockchain/{id}`
 		GetBlockchainByID(ctx context.Context, blockchainID string) (*v1Types.Blockchain, error)
 		// GetApplications returns all Applications in the DB - GET `<base URL>/<version>/application`
@@ -292,10 +294,15 @@ func (db *DBClient) ActivateChain(ctx context.Context, chainID v2Types.RelayChai
 /* -- Read Methods -- */
 
 // GetBlockchains returns all blockchains in the DB - GET `<base URL>/<version>/blockchain`
-func (db *DBClient) GetBlockchains(ctx context.Context) ([]*v1Types.Blockchain, error) {
+func (db *DBClient) GetBlockchains(ctx context.Context, includeInactive bool) ([]*types.Blockchain, error) {
 	endpoint := db.versionedBasePath(blockchainPath)
 
-	return getReq[[]*v1Types.Blockchain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+	// If includeInactive is true, add the parameter to the URL
+	if includeInactive {
+		endpoint = fmt.Sprintf("%s?include_inactive=%s", endpoint, strconv.FormatBool(includeInactive))
+	}
+
+	return getReq[[]*types.Blockchain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 // GetBlockchainByID returns a single Blockchain by its relay chain ID - GET `<base URL>/<version>/blockchain/{id}`

@@ -3,8 +3,8 @@ module github.com/pokt-foundation/db-client
 go 1.19
 
 require (
-	github.com/pokt-foundation/portal-db v1.10.8
-	github.com/pokt-foundation/portal-db/v2 v2.0.0-beta.89
+	github.com/pokt-foundation/portal-db v1.11.0
+	github.com/pokt-foundation/portal-db/v2 v2.5.2
 	github.com/stretchr/testify v1.8.1
 )
 
