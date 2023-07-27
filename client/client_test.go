@@ -113,7 +113,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				chain, err := ts.client1.GetChainByID(testCtx, test.chainID)
+				chain, err := ts.client1.GetChainByID(context.Background(), test.chainID)
 				ts.Equal(test.err, err)
 
 				if err == nil {
@@ -121,7 +121,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 					test.expectedChain.GigastakeApps[test.gigastakeApp.ID] = test.gigastakeApp
 					ts.Equal(test.expectedChain, chain)
 
-					chain, err = ts.client2.GetChainByID(testCtx, test.chainID)
+					chain, err = ts.client2.GetChainByID(context.Background(), test.chainID)
 					ts.Equal(test.err, err)
 					test.expectedChain.GigastakeApps = make(map[types.GigastakeAppID]*types.GigastakeApp)
 					test.expectedChain.GigastakeApps[test.gigastakeApp.ID] = test.gigastakeApp
@@ -133,15 +133,23 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 	ts.Run("Test_GetAllChains", func() {
 		tests := []struct {
-			name           string
-			expectedChains map[types.RelayChainID]*types.Chain
-			gigastakeApps  map[types.GigastakeAppID]*types.GigastakeApp
-			err            error
+			name            string
+			expectedChains  map[types.RelayChainID]*types.Chain
+			gigastakeApps   map[types.GigastakeAppID]*types.GigastakeApp
+			includeInactive bool
+			err             error
 		}{
 			{
-				name:           "Should get all chains",
-				expectedChains: testdata.Chains,
-				gigastakeApps:  testdata.GigastakeApps,
+				name:            "Should get all active chains",
+				expectedChains:  filterActiveChains(testdata.Chains),
+				gigastakeApps:   testdata.GigastakeApps,
+				includeInactive: false,
+			},
+			{
+				name:            "Should get all chains including inactive",
+				expectedChains:  testdata.Chains,
+				gigastakeApps:   testdata.GigastakeApps,
+				includeInactive: true,
 			},
 		}
 
@@ -159,13 +167,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 					}
 				}
 
-				chains, err := ts.client1.GetAllChains(testCtx)
+				chains, err := ts.client1.GetAllChains(context.Background(), test.includeInactive)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
 					ts.Equal(test.expectedChains, chainsToMap(chains))
 
-					chains, err = ts.client2.GetAllChains(testCtx)
+					chains, err = ts.client2.GetAllChains(context.Background(), test.includeInactive)
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedChains, chainsToMap(chains))
 				}
@@ -201,13 +209,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				portalApp, err := ts.client1.GetPortalAppByID(testCtx, test.portalAppID)
+				portalApp, err := ts.client1.GetPortalAppByID(context.Background(), test.portalAppID)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
 					ts.Equal(test.expectedApp, portalApp)
 
-					portalApp, err = ts.client2.GetPortalAppByID(testCtx, test.portalAppID)
+					portalApp, err = ts.client2.GetPortalAppByID(context.Background(), test.portalAppID)
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedApp, portalApp)
 				}
@@ -229,13 +237,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				portalApps, err := ts.client1.GetAllPortalApps(testCtx)
+				portalApps, err := ts.client1.GetAllPortalApps(context.Background())
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedApps, portalAppsToMap(portalApps))
 
-					portalApps, err = ts.client2.GetAllPortalApps(testCtx)
+					portalApps, err = ts.client2.GetAllPortalApps(context.Background())
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedApps, portalAppsToMap(portalApps))
 				}
@@ -287,13 +295,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				portalApps, err := ts.client1.GetPortalAppsByUser(testCtx, test.userID, test.roleFilter)
+				portalApps, err := ts.client1.GetPortalAppsByUser(context.Background(), test.userID, test.roleFilter)
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedApps, portalAppsToMap(portalApps))
 
-					portalApps, err = ts.client2.GetPortalAppsByUser(testCtx, test.userID, test.roleFilter)
+					portalApps, err = ts.client2.GetPortalAppsByUser(context.Background(), test.userID, test.roleFilter)
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedApps, portalAppsToMap(portalApps))
 				}
@@ -315,13 +323,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				portalAppLites, err := ts.client1.GetPortalAppsForMiddleware(testCtx)
+				portalAppLites, err := ts.client1.GetPortalAppsForMiddleware(context.Background())
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedApps, portalAppLitesToMap(portalAppLites))
 
-					portalAppLites, err = ts.client2.GetPortalAppsForMiddleware(testCtx)
+					portalAppLites, err = ts.client2.GetPortalAppsForMiddleware(context.Background())
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedApps, portalAppLitesToMap(portalAppLites))
 				}
@@ -345,13 +353,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				accounts, err := ts.client1.GetAllAccounts(testCtx)
+				accounts, err := ts.client1.GetAllAccounts(context.Background())
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Len(accounts, test.expectedAccNum)
 
-					accounts, err = ts.client2.GetAllAccounts(testCtx)
+					accounts, err = ts.client2.GetAllAccounts(context.Background())
 					ts.Equal(test.err, err)
 					ts.Len(accounts, test.expectedAccNum)
 				}
@@ -393,13 +401,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				}
 				test.expectedAcc.PortalApps[test.assignApp.ID] = test.assignApp
 
-				account, err := ts.client1.GetAccountByID(testCtx, test.accountID)
+				account, err := ts.client1.GetAccountByID(context.Background(), test.accountID)
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedAcc, account)
 
-					account, err = ts.client2.GetAccountByID(testCtx, test.accountID)
+					account, err = ts.client2.GetAccountByID(context.Background(), test.accountID)
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedAcc, account)
 				}
@@ -466,7 +474,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				accounts, err := ts.client1.GetAccountsByUser(testCtx, test.userID)
+				accounts, err := ts.client1.GetAccountsByUser(context.Background(), test.userID)
 				ts.Equal(test.err, err)
 
 				if err == nil {
@@ -478,7 +486,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 					}
 					ts.Equal(test.expectedAccs, accountMap)
 
-					accounts, err = ts.client2.GetAccountsByUser(testCtx, test.userID)
+					accounts, err = ts.client2.GetAccountsByUser(context.Background(), test.userID)
 					ts.Equal(test.err, err)
 					accountMap = convertAccountsToMap(accounts)
 					for id, account := range test.expectedAccs {
@@ -544,13 +552,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				userPermissions, err := ts.client1.GetUserPermissionByUserID(testCtx, test.providerUserID)
+				userPermissions, err := ts.client1.GetUserPermissionByUserID(context.Background(), test.providerUserID)
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedPermissions, userPermissions)
 
-					userPermissions, err = ts.client2.GetUserPermissionByUserID(testCtx, test.providerUserID)
+					userPermissions, err = ts.client2.GetUserPermissionByUserID(context.Background(), test.providerUserID)
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedPermissions, userPermissions)
 				}
@@ -614,13 +622,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				portalUserID, err := ts.client1.GetPortalUserIDFromProviderUserID(testCtx, test.providerUserID)
+				portalUserID, err := ts.client1.GetPortalUserIDFromProviderUserID(context.Background(), test.providerUserID)
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedPortalUserID, portalUserID)
 
-					portalUserID, err = ts.client2.GetPortalUserIDFromProviderUserID(testCtx, test.providerUserID)
+					portalUserID, err = ts.client2.GetPortalUserIDFromProviderUserID(context.Background(), test.providerUserID)
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedPortalUserID, portalUserID)
 				}
@@ -645,13 +653,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				plans, err := ts.client1.GetAllPlans(testCtx)
+				plans, err := ts.client1.GetAllPlans(context.Background())
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(derefPlansMap(test.expected), convertPlansToMap(plans))
 
-					plans, err = ts.client2.GetAllPlans(testCtx)
+					plans, err = ts.client2.GetAllPlans(context.Background())
 					ts.Equal(test.err, err)
 					ts.Equal(derefPlansMap(test.expected), convertPlansToMap(plans))
 				}
@@ -675,13 +683,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				blockedContracts, err := ts.client1.GetBlockedContracts(testCtx)
+				blockedContracts, err := ts.client1.GetBlockedContracts(context.Background())
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedBlockedCon, blockedContracts)
 
-					blockedContracts, err = ts.client2.GetBlockedContracts(testCtx)
+					blockedContracts, err = ts.client2.GetBlockedContracts(context.Background())
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedBlockedCon, blockedContracts)
 				}
@@ -722,7 +730,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				createdChainResp, err := ts.client1.CreateChainAndGigastakeApps(testCtx, test.newChainInput)
+				createdChainResp, err := ts.client1.CreateChainAndGigastakeApps(context.Background(), test.newChainInput)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -747,7 +755,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 						ts.Equal(test.newChainInput.GigastakeApps, createdGigastakeApps)
 					}
 
-					createdChainByID, err := ts.client1.GetChainByID(testCtx, createdChain.ID)
+					createdChainByID, err := ts.client1.GetChainByID(context.Background(), createdChain.ID)
 					ts.NoError(err)
 					createdChainByID.CreatedAt = timestamp
 					createdChainByID.UpdatedAt = timestamp
@@ -755,7 +763,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					createdChainByID.GigastakeApps = nil
 					ts.Equal(createdChain, createdChainByID)
 
-					createdChainByID, err = ts.client2.GetChainByID(testCtx, createdChain.ID)
+					createdChainByID, err = ts.client2.GetChainByID(context.Background(), createdChain.ID)
 					ts.NoError(err)
 					createdChainByID.CreatedAt = timestamp
 					createdChainByID.UpdatedAt = timestamp
@@ -798,7 +806,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				createdGigastakeApp, err := ts.client1.CreateGigastakeApp(testCtx, test.gigastakeAppInput)
+				createdGigastakeApp, err := ts.client1.CreateGigastakeApp(context.Background(), test.gigastakeAppInput)
 				ts.Equal(test.err, err)
 
 				if err == nil {
@@ -818,13 +826,13 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					// Check the GigastakeApp is included in each chain
 					for chainID := range test.gigastakeAppInput.ChainIDs {
-						chain, err := ts.client1.GetChainByID(testCtx, chainID)
+						chain, err := ts.client1.GetChainByID(context.Background(), chainID)
 						ts.NoError(err)
 						chain.GigastakeApps[test.expected.ID].CreatedAt = timestamp
 						chain.GigastakeApps[test.expected.ID].UpdatedAt = timestamp
 						ts.Equal(test.expected, chain.GigastakeApps[test.expected.ID])
 
-						chain, err = ts.client2.GetChainByID(testCtx, chainID)
+						chain, err = ts.client2.GetChainByID(context.Background(), chainID)
 						ts.NoError(err)
 						chain.GigastakeApps[test.expected.ID].CreatedAt = timestamp
 						chain.GigastakeApps[test.expected.ID].UpdatedAt = timestamp
@@ -859,7 +867,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				chainUpdateResponse, err := ts.client1.UpdateChain(testCtx, test.chainUpdate)
+				chainUpdateResponse, err := ts.client1.UpdateChain(context.Background(), test.chainUpdate)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -867,9 +875,9 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					ts.NotEmpty(chainUpdateResponse)
 
-					updatedChainByID1, err := ts.client1.GetChainByID(testCtx, chainUpdateResponse.ID)
+					updatedChainByID1, err := ts.client1.GetChainByID(context.Background(), chainUpdateResponse.ID)
 					ts.NoError(err)
-					updatedChainByID2, err := ts.client2.GetChainByID(testCtx, chainUpdateResponse.ID)
+					updatedChainByID2, err := ts.client2.GetChainByID(context.Background(), chainUpdateResponse.ID)
 					ts.NoError(err)
 
 					updatedChains := []*types.Chain{updatedChainByID1, updatedChainByID2}
@@ -1021,7 +1029,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				updatedGigastakeApp, err := ts.client1.UpdateGigastakeApp(testCtx, test.gigastakeAppUpdate)
+				updatedGigastakeApp, err := ts.client1.UpdateGigastakeApp(context.Background(), test.gigastakeAppUpdate)
 				ts.Equal(test.err, err)
 
 				if err == nil {
@@ -1032,12 +1040,12 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					// Check the GigastakeApp is included in each chain
 					for _, chainID := range test.gigastakeAppUpdate.ChainIDs {
-						chain, err := ts.client1.GetChainByID(testCtx, chainID)
+						chain, err := ts.client1.GetChainByID(context.Background(), chainID)
 						ts.NoError(err)
 						ts.Equal(test.gigastakeAppUpdate.Name, chain.GigastakeApps[updatedGigastakeApp.ID].Name)
 						ts.Contains(chain.GigastakeApps, updatedGigastakeApp.ID)
 
-						chain, err = ts.client2.GetChainByID(testCtx, chainID)
+						chain, err = ts.client2.GetChainByID(context.Background(), chainID)
 						ts.NoError(err)
 						ts.Equal(test.gigastakeAppUpdate.Name, chain.GigastakeApps[updatedGigastakeApp.ID].Name)
 						ts.Contains(chain.GigastakeApps, updatedGigastakeApp.ID)
@@ -1068,18 +1076,18 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				chainActive, err := ts.client1.ActivateChain(testCtx, test.chainID, test.active)
+				chainActive, err := ts.client1.ActivateChain(context.Background(), test.chainID, test.active)
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					<-time.After(50 * time.Millisecond)
 					ts.Equal(test.active, chainActive)
 
-					fetchedChain, err := ts.client1.GetChainByID(testCtx, test.chainID)
+					fetchedChain, err := ts.client1.GetChainByID(context.Background(), test.chainID)
 					ts.NoError(err)
 					ts.Equal(test.active, fetchedChain.Active)
 
-					fetchedChain, err = ts.client2.GetChainByID(testCtx, test.chainID)
+					fetchedChain, err = ts.client2.GetChainByID(context.Background(), test.chainID)
 					ts.NoError(err)
 					ts.Equal(test.active, fetchedChain.Active)
 				}
@@ -1197,7 +1205,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				test.portalAppInput.AATs = map[types.ProtocolAppID]types.AAT{
 					test.aatInput.ID: test.aatInput,
 				}
-				createdPortalApp, err := ts.client1.CreatePortalApp(testCtx, *test.portalAppInput)
+				createdPortalApp, err := ts.client1.CreatePortalApp(context.Background(), *test.portalAppInput)
 				ts.Equal(test.err, err)
 
 				if err == nil {
@@ -1224,13 +1232,13 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					ts.Equal(test.expected, createdPortalApp)
 
-					portalApp, err := ts.client1.GetPortalAppByID(testCtx, createdPortalApp.ID)
+					portalApp, err := ts.client1.GetPortalAppByID(context.Background(), createdPortalApp.ID)
 					ts.NoError(err)
 					portalApp.CreatedAt = timestamp
 					portalApp.UpdatedAt = timestamp
 					ts.Equal(test.expected, portalApp)
 
-					portalApp, err = ts.client2.GetPortalAppByID(testCtx, createdPortalApp.ID)
+					portalApp, err = ts.client2.GetPortalAppByID(context.Background(), createdPortalApp.ID)
 					ts.NoError(err)
 					portalApp.CreatedAt = timestamp
 					portalApp.UpdatedAt = timestamp
@@ -1483,11 +1491,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				if err == nil {
 					<-time.After(50 * time.Millisecond)
 
-					updatedPortalApp, err := ts.client1.GetPortalAppByID(testCtx, createdPortalApp.ID)
+					updatedPortalApp, err := ts.client1.GetPortalAppByID(context.Background(), createdPortalApp.ID)
 					ts.NoError(err)
 					checkUpdatedPortalApp(updatedPortalApp)
 
-					updatedPortalApp, err = ts.client2.GetPortalAppByID(testCtx, createdPortalApp.ID)
+					updatedPortalApp, err = ts.client2.GetPortalAppByID(context.Background(), createdPortalApp.ID)
 					ts.NoError(err)
 					checkUpdatedPortalApp(updatedPortalApp)
 				}
@@ -1518,15 +1526,15 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 			<-time.After(50 * time.Millisecond)
 
 			// Ensure the Portal App exists in both clients
-			portalApp, err := ts.client1.GetPortalAppByID(testCtx, createdPortalApp.ID)
+			portalApp, err := ts.client1.GetPortalAppByID(context.Background(), createdPortalApp.ID)
 			ts.NoError(err)
 			ts.NotEmpty(portalApp)
-			portalApp, err = ts.client2.GetPortalAppByID(testCtx, createdPortalApp.ID)
+			portalApp, err = ts.client2.GetPortalAppByID(context.Background(), createdPortalApp.ID)
 			ts.NoError(err)
 			ts.NotEmpty(portalApp)
 
 			ts.Run(test.name, func() {
-				response, err := ts.client1.DeletePortalApp(testCtx, createdPortalApp.ID)
+				response, err := ts.client1.DeletePortalApp(context.Background(), createdPortalApp.ID)
 				ts.NoError(err)
 
 				if err == nil {
@@ -1535,11 +1543,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					<-time.After(50 * time.Millisecond)
 
 					// Ensure the Portal App is deleted for both clients
-					portalApp, err := ts.client1.GetPortalAppByID(testCtx, createdPortalApp.ID)
+					portalApp, err := ts.client1.GetPortalAppByID(context.Background(), createdPortalApp.ID)
 					ts.Equal(test.err, err)
 					ts.Nil(portalApp)
 
-					portalApp, err = ts.client2.GetPortalAppByID(testCtx, createdPortalApp.ID)
+					portalApp, err = ts.client2.GetPortalAppByID(context.Background(), createdPortalApp.ID)
 					ts.Equal(test.err, err)
 					ts.Nil(portalApp)
 				}
@@ -1574,18 +1582,18 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				result, err := ts.client1.UpdatePortalAppsFirstDateSurpassed(testCtx, test.firstDateSurpassedUpdate)
+				result, err := ts.client1.UpdatePortalAppsFirstDateSurpassed(context.Background(), test.firstDateSurpassedUpdate)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
 					ts.Equal(test.expected, result)
 
 					for _, appID := range test.firstDateSurpassedUpdate.PortalAppIDs {
-						portalApp, err := ts.client1.GetPortalAppByID(testCtx, appID)
+						portalApp, err := ts.client1.GetPortalAppByID(context.Background(), appID)
 						ts.NoError(err)
 						ts.Equal(test.firstDateSurpassedUpdate.FirstDateSurpassed, portalApp.FirstDateSurpassed)
 
-						portalApp, err = ts.client2.GetPortalAppByID(testCtx, appID)
+						portalApp, err = ts.client2.GetPortalAppByID(context.Background(), appID)
 						ts.NoError(err)
 						ts.Equal(test.firstDateSurpassedUpdate.FirstDateSurpassed, portalApp.FirstDateSurpassed)
 					}
@@ -1660,7 +1668,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				createdAccount, err := ts.client1.CreateAccount(testCtx, test.ownerID, *test.accountInput, time.Now())
+				createdAccount, err := ts.client1.CreateAccount(context.Background(), test.ownerID, *test.accountInput, time.Now())
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -1678,13 +1686,13 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					expectedUsers.PortalAppRoles = map[types.PortalAppID]types.RoleName{}
 					test.expected.Users[test.ownerID] = expectedUsers
 
-					account, err := ts.client1.GetAccountByID(testCtx, createdAccount.ID)
+					account, err := ts.client1.GetAccountByID(context.Background(), createdAccount.ID)
 					ts.NoError(err)
 					account.CreatedAt = testdata.MockTimestamp
 					account.UpdatedAt = testdata.MockTimestamp
 					ts.Equal(test.expected, account)
 
-					account, err = ts.client2.GetAccountByID(testCtx, createdAccount.ID)
+					account, err = ts.client2.GetAccountByID(context.Background(), createdAccount.ID)
 					ts.NoError(err)
 					account.CreatedAt = testdata.MockTimestamp
 					account.UpdatedAt = testdata.MockTimestamp
@@ -1727,12 +1735,12 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 		for _, test := range tests {
 			ts.Run(test.name, func() {
 				if test.err == nil {
-					accountBeforeUpdate, err := ts.client1.GetAccountByID(testCtx, test.accountBeforeUpdate.ID)
+					accountBeforeUpdate, err := ts.client1.GetAccountByID(context.Background(), test.accountBeforeUpdate.ID)
 					ts.NoError(err)
 					ts.Equal(test.accountBeforeUpdate.PlanType, accountBeforeUpdate.PlanType)
 				}
 
-				updatedAccount, err := ts.client1.UpdateAccount(testCtx, test.update)
+				updatedAccount, err := ts.client1.UpdateAccount(context.Background(), test.update)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -1740,7 +1748,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					ts.Equal(test.expected.PlanType, updatedAccount.PlanType)
 
-					accountAfterUpdate, err := ts.client1.GetAccountByID(testCtx, updatedAccount.ID)
+					accountAfterUpdate, err := ts.client1.GetAccountByID(context.Background(), updatedAccount.ID)
 					ts.NoError(err)
 					ts.Equal(test.expected.PlanType, accountAfterUpdate.PlanType)
 				}
@@ -1771,7 +1779,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				createdAccountIntegration, err := ts.client1.CreateAccountIntegration(testCtx, test.accountIntegrationInput.AccountID, *test.accountIntegrationInput)
+				createdAccountIntegration, err := ts.client1.CreateAccountIntegration(context.Background(), test.accountIntegrationInput.AccountID, *test.accountIntegrationInput)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -1784,11 +1792,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					ts.Equal(&test.expectedAccountIntegration, createdAccountIntegration)
 
-					account, err := ts.client1.GetAccountByID(testCtx, createdAccountIntegration.AccountID)
+					account, err := ts.client1.GetAccountByID(context.Background(), createdAccountIntegration.AccountID)
 					ts.NoError(err)
 					ts.Equal(test.expectedAccountIntegration, account.Integrations)
 
-					account, err = ts.client2.GetAccountByID(testCtx, createdAccountIntegration.AccountID)
+					account, err = ts.client2.GetAccountByID(context.Background(), createdAccountIntegration.AccountID)
 					ts.NoError(err)
 					ts.Equal(test.expectedAccountIntegration, account.Integrations)
 				}
@@ -1819,7 +1827,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				updatedAccountIntegration, err := ts.client1.UpdateAccountIntegration(testCtx, test.accountIntegrationInput.AccountID, test.accountIntegrationInput)
+				updatedAccountIntegration, err := ts.client1.UpdateAccountIntegration(context.Background(), test.accountIntegrationInput.AccountID, test.accountIntegrationInput)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -1829,11 +1837,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					test.expected.AccountID = updatedAccountIntegration.AccountID
 					ts.Equal(test.expected, updatedAccountIntegration)
 
-					account, err := ts.client1.GetAccountByID(testCtx, updatedAccountIntegration.AccountID)
+					account, err := ts.client1.GetAccountByID(context.Background(), updatedAccountIntegration.AccountID)
 					ts.NoError(err)
 					ts.Equal(test.expected.CovalentAPIKeyFree, account.Integrations.CovalentAPIKeyFree)
 
-					account, err = ts.client2.GetAccountByID(testCtx, updatedAccountIntegration.AccountID)
+					account, err = ts.client2.GetAccountByID(context.Background(), updatedAccountIntegration.AccountID)
 					ts.NoError(err)
 					ts.Equal(test.expected.CovalentAPIKeyFree, account.Integrations.CovalentAPIKeyFree)
 				}
@@ -1871,15 +1879,15 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 			<-time.After(50 * time.Millisecond)
 
 			// Ensure the Account exists in both clients
-			account, err := ts.client1.GetAccountByID(testCtx, createdAccount.ID)
+			account, err := ts.client1.GetAccountByID(context.Background(), createdAccount.ID)
 			ts.NoError(err)
 			ts.NotEmpty(account)
-			account, err = ts.client2.GetAccountByID(testCtx, createdAccount.ID)
+			account, err = ts.client2.GetAccountByID(context.Background(), createdAccount.ID)
 			ts.NoError(err)
 			ts.NotEmpty(account)
 
 			ts.Run(test.name, func() {
-				response, err := ts.client1.DeleteAccount(testCtx, createdAccount.ID)
+				response, err := ts.client1.DeleteAccount(context.Background(), createdAccount.ID)
 				ts.NoError(err)
 
 				if err == nil {
@@ -1888,11 +1896,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					<-time.After(50 * time.Millisecond)
 
 					// Ensure the Account is deleted for both clients
-					account, err := ts.client1.GetAccountByID(testCtx, createdAccount.ID)
+					account, err := ts.client1.GetAccountByID(context.Background(), createdAccount.ID)
 					ts.Equal(test.err, err)
 					ts.Nil(account)
 
-					account, err = ts.client2.GetAccountByID(testCtx, createdAccount.ID)
+					account, err = ts.client2.GetAccountByID(context.Background(), createdAccount.ID)
 					ts.Equal(test.err, err)
 					ts.Nil(account)
 				}
@@ -2015,7 +2023,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				userIDResp, err := ts.client1.WriteAccountUser(testCtx, test.createAccountUserInput, testdata.MockTimestamp)
+				userIDResp, err := ts.client1.WriteAccountUser(context.Background(), test.createAccountUserInput, testdata.MockTimestamp)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -2029,16 +2037,16 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 						test.expected.UserID = userIDResp["userID"]
 					}
 
-					account, err := ts.client1.GetAccountByID(testCtx, accountID)
+					account, err := ts.client1.GetAccountByID(context.Background(), accountID)
 					ts.NoError(err)
 					ts.Equal(*test.expected, account.Users[test.expected.UserID])
 
-					account, err = ts.client2.GetAccountByID(testCtx, accountID)
+					account, err = ts.client2.GetAccountByID(context.Background(), accountID)
 					ts.NoError(err)
 					ts.Equal(*test.expected, account.Users[test.expected.UserID])
 
 					// Clean up created account user
-					_, err = ts.client1.RemoveAccountUser(testCtx, types.UpdateRemoveAccountUser{
+					_, err = ts.client1.RemoveAccountUser(context.Background(), types.UpdateRemoveAccountUser{
 						AccountID:   test.createAccountUserInput.AccountID,
 						PortalAppID: test.createAccountUserInput.PortalAppID,
 						UserID:      test.expected.UserID,
@@ -2262,7 +2270,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				_, err := ts.client1.SetAccountUserRole(testCtx, test.updateAccountUserRole, test.testCreatedTime)
+				_, err := ts.client1.SetAccountUserRole(context.Background(), test.updateAccountUserRole, test.testCreatedTime)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -2270,11 +2278,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					accountID := test.updateAccountUserRole.AccountID
 
-					account, err := ts.client1.GetAccountByID(testCtx, accountID)
+					account, err := ts.client1.GetAccountByID(context.Background(), accountID)
 					ts.NoError(err)
 					ts.Equal(test.accountUsersAfterUpdate, account.Users)
 
-					account, err = ts.client2.GetAccountByID(testCtx, accountID)
+					account, err = ts.client2.GetAccountByID(context.Background(), accountID)
 					ts.NoError(err)
 					ts.Equal(test.accountUsersAfterUpdate, account.Users)
 				}
@@ -2362,7 +2370,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				_, err := ts.client1.UpdateAcceptAccountUser(testCtx, test.acceptAccountUserInput, testdata.MockTimestamp)
+				_, err := ts.client1.UpdateAcceptAccountUser(context.Background(), test.acceptAccountUserInput, testdata.MockTimestamp)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -2371,11 +2379,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					accountID := test.accountID
 					test.expected.AccountID = ""
 
-					account, err := ts.client1.GetAccountByID(testCtx, accountID)
+					account, err := ts.client1.GetAccountByID(context.Background(), accountID)
 					ts.NoError(err)
 					ts.Equal(*test.expected, account.Users[test.expected.UserID])
 
-					account, err = ts.client2.GetAccountByID(testCtx, accountID)
+					account, err = ts.client2.GetAccountByID(context.Background(), accountID)
 					ts.NoError(err)
 					ts.Equal(*test.expected, account.Users[test.expected.UserID])
 				}
@@ -2462,7 +2470,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				var userID types.UserID
 
 				if test.updateRemoveAccountUser.UserID == types.UserID("") {
-					userIDResp, err := ts.client1.WriteAccountUser(testCtx, test.createAccountUserInput, testdata.MockTimestamp)
+					userIDResp, err := ts.client1.WriteAccountUser(context.Background(), test.createAccountUserInput, testdata.MockTimestamp)
 					ts.NoError(err)
 
 					<-time.After(50 * time.Millisecond)
@@ -2471,22 +2479,22 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					userID = userIDResp["userID"]
 
 					test.updateRemoveAccountUser.UserID = userID
-					account, err := ts.client1.GetAccountByID(testCtx, test.createAccountUserInput.AccountID)
+					account, err := ts.client1.GetAccountByID(context.Background(), test.createAccountUserInput.AccountID)
 					ts.NoError(err)
 					ts.Contains(account.Users, userID)
 				}
 
-				_, err := ts.client1.RemoveAccountUser(testCtx, test.updateRemoveAccountUser)
+				_, err := ts.client1.RemoveAccountUser(context.Background(), test.updateRemoveAccountUser)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
 					<-time.After(50 * time.Millisecond)
 
-					account, err := ts.client1.GetAccountByID(testCtx, test.createAccountUserInput.AccountID)
+					account, err := ts.client1.GetAccountByID(context.Background(), test.createAccountUserInput.AccountID)
 					ts.NoError(err)
 					ts.NotContains(account.Users, userID)
 
-					account, err = ts.client2.GetAccountByID(testCtx, test.createAccountUserInput.AccountID)
+					account, err = ts.client2.GetAccountByID(context.Background(), test.createAccountUserInput.AccountID)
 					ts.NoError(err)
 					ts.NotContains(account.Users, userID)
 				}
@@ -2553,7 +2561,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				createdUser, err := ts.client1.CreateUser(testCtx, test.userInput)
+				createdUser, err := ts.client1.CreateUser(context.Background(), test.userInput)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
@@ -2568,11 +2576,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 					// If the user was created, it should have permissions
 					providerID := createdUser.User.AuthProviders[types.AuthTypeAuth0Username].ProviderUserID
-					permission, err := ts.client1.GetUserPermissionByUserID(testCtx, providerID)
+					permission, err := ts.client1.GetUserPermissionByUserID(context.Background(), providerID)
 					ts.NoError(err)
 					ts.NotNil(permission)
 
-					permission, err = ts.client2.GetUserPermissionByUserID(testCtx, providerID)
+					permission, err = ts.client2.GetUserPermissionByUserID(context.Background(), providerID)
 					ts.NoError(err)
 					ts.NotNil(permission)
 				}
@@ -2609,23 +2617,23 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				_, err := ts.client1.DeleteUser(testCtx, test.userID)
+				_, err := ts.client1.DeleteUser(context.Background(), test.userID)
 				ts.Equal(test.expectedErr, err)
 
 				if test.expectedErr == nil {
-					accounts, err := ts.client1.GetAccountsByUser(testCtx, test.userID)
+					accounts, err := ts.client1.GetAccountsByUser(context.Background(), test.userID)
 					ts.Error(err)
 					ts.Nil(accounts)
 
-					userPermissions, err := ts.client1.GetUserPermissionByUserID(testCtx, test.providerUserID)
+					userPermissions, err := ts.client1.GetUserPermissionByUserID(context.Background(), test.providerUserID)
 					ts.NoError(err)
 					ts.Empty(userPermissions)
 
-					accounts, err = ts.client2.GetAccountsByUser(testCtx, test.userID)
+					accounts, err = ts.client2.GetAccountsByUser(context.Background(), test.userID)
 					ts.Error(err)
 					ts.Nil(accounts)
 
-					userPermissions, err = ts.client2.GetUserPermissionByUserID(testCtx, test.providerUserID)
+					userPermissions, err = ts.client2.GetUserPermissionByUserID(context.Background(), test.providerUserID)
 					ts.NoError(err)
 					ts.Empty(userPermissions)
 				}
@@ -2680,17 +2688,17 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				_, err := ts.client1.WriteBlockedContract(testCtx, test.blockedContract)
+				_, err := ts.client1.WriteBlockedContract(context.Background(), test.blockedContract)
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
 					<-time.After(50 * time.Millisecond)
 
-					globalBlockedContracts, err := ts.client1.GetBlockedContracts(testCtx)
+					globalBlockedContracts, err := ts.client1.GetBlockedContracts(context.Background())
 					ts.NoError(err)
 					ts.Equal(test.expectedBlockedContracts, globalBlockedContracts)
 
-					globalBlockedContracts, err = ts.client2.GetBlockedContracts(testCtx)
+					globalBlockedContracts, err = ts.client2.GetBlockedContracts(context.Background())
 					ts.NoError(err)
 					ts.Equal(test.expectedBlockedContracts, globalBlockedContracts)
 				}
@@ -2803,17 +2811,17 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				_, err := ts.client1.RemoveBlockedContract(testCtx, test.blockedAddress)
+				_, err := ts.client1.RemoveBlockedContract(context.Background(), test.blockedAddress)
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					<-time.After(50 * time.Millisecond)
 
-					globalBlockedContracts, err := ts.client1.GetBlockedContracts(testCtx)
+					globalBlockedContracts, err := ts.client1.GetBlockedContracts(context.Background())
 					ts.NoError(err)
 					ts.Equal(test.expectedBlockedContracts, globalBlockedContracts)
 
-					globalBlockedContracts, err = ts.client2.GetBlockedContracts(testCtx)
+					globalBlockedContracts, err = ts.client2.GetBlockedContracts(context.Background())
 					ts.NoError(err)
 					ts.Equal(test.expectedBlockedContracts, globalBlockedContracts)
 				}
@@ -2881,8 +2889,19 @@ func derefPlansMap(plans map[types.PayPlanType]*types.Plan) map[types.PayPlanTyp
 	return planMap
 }
 
+func filterActiveChains(chains map[types.RelayChainID]*types.Chain) map[types.RelayChainID]*types.Chain {
+	activeChains := make(map[types.RelayChainID]*types.Chain)
+
+	for id, chain := range chains {
+		if chain.Active {
+			activeChains[id] = chain
+		}
+	}
+
+	return activeChains
+}
+
 /* ---------- Test Suite Util Interfaces ---------- */
-var testCtx = context.Background()
 
 type phdE2EReadTestSuite struct {
 	suite.Suite

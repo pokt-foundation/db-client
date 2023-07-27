@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/pokt-foundation/portal-db/v2/types"
@@ -42,7 +43,7 @@ type (
 		// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
 		GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error)
 		// GetAllChains returns all chains - GET `/v2/chain`
-		GetAllChains(ctx context.Context) ([]*types.Chain, error)
+		GetAllChains(ctx context.Context, includeInactive bool) ([]*types.Chain, error)
 
 		// GetPortalAppByID returns a single Portal App by its ID - GET `/v2/portal_app/{id}`
 		GetPortalAppByID(ctx context.Context, portalAppID types.PortalAppID) (*types.PortalApp, error)
@@ -240,8 +241,12 @@ func (db *DBClient) GetChainByID(ctx context.Context, chainID types.RelayChainID
 }
 
 // GetAllChains returns all chains - GET `/v2/chain`
-func (db *DBClient) GetAllChains(ctx context.Context) ([]*types.Chain, error) {
+func (db *DBClient) GetAllChains(ctx context.Context, includeInactive bool) ([]*types.Chain, error) {
 	endpoint := db.v2BasePath(chainPath)
+
+	if includeInactive {
+		endpoint = fmt.Sprintf("%s?include_inactive=%s", endpoint, strconv.FormatBool(includeInactive))
+	}
 
 	return getReq[[]*types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }

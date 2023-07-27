@@ -30,7 +30,10 @@ test_env_down:
 	@echo "✅ Test environment is down."
 
 run_tests:
-	go test ./... -count=1;
+	go test ./... -count=1 || true
+
+run_tests_ci:
+	go test ./... -count=1
 
 # This target runs all tests, which includes spinning up the Docker test env.
 test: test_env_up run_tests test_env_down
