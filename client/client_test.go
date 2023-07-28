@@ -88,30 +88,43 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 		tests := []struct {
 			name                string
 			expectedBlockchains map[string]*v1Types.Blockchain
-			includeInactive     bool
+			options             ChainsOptions
 			err                 error
 		}{
 			{
 				name:                "Should fetch all active blockchains in the database",
 				expectedBlockchains: filterActiveBlockchains(expectedLegacyBlockchains),
-				includeInactive:     false,
 			},
 			{
 				name:                "Should fetch all blockchains in the database including inactive",
 				expectedBlockchains: expectedLegacyBlockchains,
-				includeInactive:     true,
+				options:             ChainsOptions{IncludeInactive: true},
 			},
 		}
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				blockchains, err := ts.client1.GetBlockchains(testCtx, test.includeInactive)
-				ts.ErrorIs(test.err, err)
-				ts.Equal(test.expectedBlockchains, blockchainsToMap(blockchains))
+				var blockchains []*v1Types.Blockchain
+				var err error
 
-				blockchains, err = ts.client2.GetBlockchains(testCtx, test.includeInactive)
-				ts.NoError(err)
-				ts.Equal(test.expectedBlockchains, blockchainsToMap(blockchains))
+				if test.options.IncludeInactive {
+					blockchains, err = ts.client1.GetBlockchains(testCtx, test.options)
+				} else {
+					blockchains, err = ts.client1.GetBlockchains(testCtx)
+				}
+				ts.ErrorIs(test.err, err)
+
+				if test.err == nil {
+					ts.Equal(test.expectedBlockchains, blockchainsToMap(blockchains))
+
+					if test.options.IncludeInactive {
+						blockchains, err = ts.client2.GetBlockchains(testCtx, test.options)
+					} else {
+						blockchains, err = ts.client2.GetBlockchains(testCtx)
+					}
+					ts.NoError(err)
+					ts.Equal(test.expectedBlockchains, blockchainsToMap(blockchains))
+				}
 			})
 
 		}
@@ -282,7 +295,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 			name                  string
 			userID                string
 			expectedLoadBalancers map[string]*v1Types.LoadBalancer
-			roleNameFilter        v1Types.RoleName
+			options               PortalAppsOptions
 			err                   error
 		}{
 			{
@@ -293,9 +306,9 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				},
 			},
 			{
-				name:           "Should fetch all load balancers for a single user ID and role when a valid filter provided",
-				userID:         "auth0|amos_burton",
-				roleNameFilter: v1Types.RoleAdmin,
+				name:    "Should fetch all load balancers for a single user ID and role when a valid filter provided",
+				userID:  "auth0|amos_burton",
+				options: PortalAppsOptions{RoleNameFilter: v1Types.RoleAdmin},
 				expectedLoadBalancers: map[string]*v1Types.LoadBalancer{
 					"test_app_3": expectedLegacyLoadBalancers["test_app_3"],
 				},
@@ -306,10 +319,10 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				expectedLoadBalancers: map[string]*v1Types.LoadBalancer{},
 			},
 			{
-				name:           "Should fail if an invalid role name provided as a filter",
-				userID:         "test_user_1dbffbdfeeb225",
-				roleNameFilter: v1Types.RoleName("not_real"),
-				err:            fmt.Errorf("invalid role name filter"),
+				name:    "Should fail if an invalid role name provided as a filter",
+				userID:  "test_user_1dbffbdfeeb225",
+				options: PortalAppsOptions{RoleNameFilter: v1Types.RoleName("not_real")},
+				err:     fmt.Errorf("invalid role name filter"),
 			},
 			{
 				name:   "Should fail if the user does not exist",
@@ -320,22 +333,30 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				filter := &test.roleNameFilter
-				if test.roleNameFilter == "" {
-					filter = nil
-				}
+				var loadBalancers []*v1Types.LoadBalancer
+				var err error
 
-				loadBalancers, err := ts.client1.GetLoadBalancersByUserID(testCtx, test.userID, filter)
+				if test.options.RoleNameFilter != "" {
+					loadBalancers, err = ts.client1.GetLoadBalancersByUserID(testCtx, test.userID, test.options)
+				} else {
+					loadBalancers, err = ts.client1.GetLoadBalancersByUserID(testCtx, test.userID)
+				}
 				ts.Equal(test.err, err)
+
 				if test.err == nil {
 					ts.Equal(test.expectedLoadBalancers, loadBalancersToMap(loadBalancers))
+
+					if test.options.RoleNameFilter != "" {
+						loadBalancers, err = ts.client1.GetLoadBalancersByUserID(testCtx, test.userID, test.options)
+					} else {
+						loadBalancers, err = ts.client1.GetLoadBalancersByUserID(testCtx, test.userID)
+					}
+					ts.Equal(test.err, err)
+					if test.err == nil {
+						ts.Equal(test.expectedLoadBalancers, loadBalancersToMap(loadBalancers))
+					}
 				}
 
-				loadBalancers, err = ts.client2.GetLoadBalancersByUserID(testCtx, test.userID, filter)
-				ts.Equal(test.err, err)
-				if test.err == nil {
-					ts.Equal(test.expectedLoadBalancers, loadBalancersToMap(loadBalancers))
-				}
 			})
 		}
 	})
@@ -1243,7 +1264,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 						ts.Equal(test.userLBPermissions, permissionsByUserID.LoadBalancers[v1Types.LoadBalancerID(test.loadBalancerID)])
 
 						exists := false
-						loadBalancers, err := ts.client1.GetLoadBalancersByUserID(testCtx, test.providerUserID, nil)
+						loadBalancers, err := ts.client1.GetLoadBalancersByUserID(testCtx, test.providerUserID)
 						ts.Equal(test.err, err)
 						for _, lb := range loadBalancers {
 							if lb.ID == test.loadBalancerID {
@@ -1254,7 +1275,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 						ts.True(exists)
 
 						exists = false
-						loadBalancers, err = ts.client2.GetLoadBalancersByUserID(testCtx, test.providerUserID, nil)
+						loadBalancers, err = ts.client2.GetLoadBalancersByUserID(testCtx, test.providerUserID)
 						ts.Equal(test.err, err)
 						for _, lb := range loadBalancers {
 							if lb.ID == test.loadBalancerID {
@@ -1434,11 +1455,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					ts.Equal(test.permissionsFetchError, err)
 
 					// user's LB should have been removed from the user's LBs map in the cache
-					lbs, err := ts.client1.GetLoadBalancersByUserID(testCtx, test.providerUserID, nil)
+					lbs, err := ts.client1.GetLoadBalancersByUserID(testCtx, test.providerUserID)
 					ts.NoError(err)
 					ts.Len(lbs, test.lbsAfterDelete)
 
-					lbs, err = ts.client2.GetLoadBalancersByUserID(testCtx, test.providerUserID, nil)
+					lbs, err = ts.client2.GetLoadBalancersByUserID(testCtx, test.providerUserID)
 					ts.NoError(err)
 					ts.Len(lbs, test.lbsAfterDelete)
 				}

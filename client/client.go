@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	types "github.com/pokt-foundation/portal-db/types"
@@ -47,7 +46,7 @@ type (
 		GetChainByID(ctx context.Context, chainID v2Types.RelayChainID) (*v2Types.Chain, error)
 
 		// GetBlockchains returns all blockchains in the DB - GET `<base URL>/<version>/blockchain`
-		GetBlockchains(ctx context.Context, includeInactive bool) ([]*v1Types.Blockchain, error)
+		GetBlockchains(ctx context.Context, options ...ChainsOptions) ([]*v1Types.Blockchain, error)
 		// GetBlockchainByID returns a single Blockchain by its relay chain ID - GET `<base URL>/<version>/blockchain/{id}`
 		GetBlockchainByID(ctx context.Context, blockchainID string) (*v1Types.Blockchain, error)
 		// GetApplications returns all Applications in the DB - GET `<base URL>/<version>/application`
@@ -60,7 +59,7 @@ type (
 		GetLoadBalancerByID(ctx context.Context, loadBalancerID string) (*v1Types.LoadBalancer, error)
 		// GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`.*/
 		// This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
-		GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *v1Types.RoleName) ([]*v1Types.LoadBalancer, error)
+		GetLoadBalancersByUserID(ctx context.Context, userID string, options ...PortalAppsOptions) ([]*v1Types.LoadBalancer, error)
 		// GetPendingLoadBalancersByUserID returns all the pending load balancers for an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/pending`.*/
 		GetPendingLoadBalancersByUserID(ctx context.Context, userID string) ([]*v1Types.LoadBalancer, error)
 		// GetLoadBalancersCountByUserID returns the number of loadbalancers owned by an userID - GET `<base URL>/<version>/user/{userID}/load_balancer/count`.`
@@ -107,6 +106,13 @@ type (
 		RemoveLoadBalancer(ctx context.Context, id string) (*v1Types.LoadBalancer, error)
 		// DeleteLoadBalancerUser deletes a single User from a single Load Balancer  - DELETE `<base URL>/<version>/load_balancer/{id}/user/{userID}`
 		DeleteLoadBalancerUser(ctx context.Context, loadBalancerID, userID string) (*v1Types.LoadBalancer, error)
+	}
+
+	ChainsOptions struct {
+		IncludeInactive bool
+	}
+	PortalAppsOptions struct {
+		RoleNameFilter types.RoleName
 	}
 
 	basePath   string
@@ -166,6 +172,7 @@ var (
 	errInvalidRoleNameFilter   error = errors.New("invalid role name filter")
 	errResponseNotOK           error = errors.New("Response not OK")
 	errInvalidCreateUserJSON   error = errors.New("invalid create user JSON")
+	errMoreThanOneOption       error = errors.New("may not provider more than one options parameter")
 )
 
 // NewDBClient returns a read-write HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
@@ -294,12 +301,20 @@ func (db *DBClient) ActivateChain(ctx context.Context, chainID v2Types.RelayChai
 /* -- Read Methods -- */
 
 // GetBlockchains returns all blockchains in the DB - GET `<base URL>/<version>/blockchain`
-func (db *DBClient) GetBlockchains(ctx context.Context, includeInactive bool) ([]*types.Blockchain, error) {
+func (db *DBClient) GetBlockchains(ctx context.Context, optionParams ...ChainsOptions) ([]*types.Blockchain, error) {
+	if len(optionParams) > 1 {
+		return nil, errMoreThanOneOption
+	}
+
 	endpoint := db.versionedBasePath(blockchainPath)
 
-	// If includeInactive is true, add the parameter to the URL
-	if includeInactive {
-		endpoint = fmt.Sprintf("%s?include_inactive=%s", endpoint, strconv.FormatBool(includeInactive))
+	options := ChainsOptions{}
+	if len(optionParams) == 1 {
+		options = optionParams[0]
+	}
+
+	if options.IncludeInactive {
+		endpoint = fmt.Sprintf("%s?include_inactive=true", endpoint)
 	}
 
 	return getReq[[]*types.Blockchain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
@@ -355,21 +370,27 @@ func (db *DBClient) GetLoadBalancerByID(ctx context.Context, loadBalancerID stri
 
 // GetLoadBalancersByUserID returns all the load balancers for a user - GET `<base URL>/<version>/user/{userID}/load_balancer`
 // This method can be filtered by the user's role for a given LB. To return all LBs for the user pass nil for the roleNameFilter param.
-func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string, roleNameFilter *v1Types.RoleName) ([]*v1Types.LoadBalancer, error) {
+func (db *DBClient) GetLoadBalancersByUserID(ctx context.Context, userID string, optionParams ...PortalAppsOptions) ([]*v1Types.LoadBalancer, error) {
 	if userID == "" {
 		return nil, errNoUserID
+	}
+	if len(optionParams) > 1 {
+		return nil, errMoreThanOneOption
 	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s", db.versionedBasePath(userPath), userID, loadBalancerPath)
 
-	if roleNameFilter != nil {
-		filter := *roleNameFilter
+	options := PortalAppsOptions{}
+	if len(optionParams) > 0 {
+		options = optionParams[0]
+	}
 
-		if !v1Types.ValidRoleNames[filter] {
+	if options.RoleNameFilter != "" {
+		if !v1Types.ValidRoleNames[options.RoleNameFilter] {
 			return nil, errInvalidRoleNameFilter
 		}
 
-		endpoint = fmt.Sprintf("%s?filter=%s", endpoint, filter)
+		endpoint = fmt.Sprintf("%s?filter=%s", endpoint, options.RoleNameFilter)
 	}
 
 	return getReq[[]*v1Types.LoadBalancer](endpoint, db.getAuthHeaderForRead(), db.httpClient)
