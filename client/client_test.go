@@ -133,23 +133,22 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 	ts.Run("Test_GetAllChains", func() {
 		tests := []struct {
-			name            string
-			expectedChains  map[types.RelayChainID]*types.Chain
-			gigastakeApps   map[types.GigastakeAppID]*types.GigastakeApp
-			includeInactive bool
-			err             error
+			name           string
+			expectedChains map[types.RelayChainID]*types.Chain
+			gigastakeApps  map[types.GigastakeAppID]*types.GigastakeApp
+			options        ChainsOptions
+			err            error
 		}{
 			{
-				name:            "Should get all active chains",
-				expectedChains:  filterActiveChains(testdata.Chains),
-				gigastakeApps:   testdata.GigastakeApps,
-				includeInactive: false,
+				name:           "Should get all active chains",
+				expectedChains: filterActiveChains(testdata.Chains),
+				gigastakeApps:  testdata.GigastakeApps,
 			},
 			{
-				name:            "Should get all chains including inactive",
-				expectedChains:  testdata.Chains,
-				gigastakeApps:   testdata.GigastakeApps,
-				includeInactive: true,
+				name:           "Should get all chains including inactive",
+				expectedChains: testdata.Chains,
+				gigastakeApps:  testdata.GigastakeApps,
+				options:        ChainsOptions{IncludeInactive: true},
 			},
 		}
 
@@ -167,13 +166,25 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 					}
 				}
 
-				chains, err := ts.client1.GetAllChains(context.Background(), test.includeInactive)
+				var chains []*types.Chain
+				var err error
+
+				if test.options.IncludeInactive {
+					chains, err = ts.client1.GetAllChains(context.Background(), test.options)
+				} else {
+					chains, err = ts.client1.GetAllChains(context.Background())
+				}
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
 					ts.Equal(test.expectedChains, chainsToMap(chains))
 
-					chains, err = ts.client2.GetAllChains(context.Background(), test.includeInactive)
+					if test.options.IncludeInactive {
+						chains, err = ts.client2.GetAllChains(context.Background(), test.options)
+					} else {
+						chains, err = ts.client2.GetAllChains(context.Background())
+					}
+
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedChains, chainsToMap(chains))
 				}
@@ -255,38 +266,37 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 		tests := []struct {
 			name         string
 			userID       types.UserID
-			roleFilter   types.RoleName
+			options      PortalAppsOptions
 			expectedApps map[types.PortalAppID]*types.PortalApp
 			err          error
 		}{
 			{
-				name:       "Should get all portal apps for user_4 with no role filter",
-				userID:     "user_4",
-				roleFilter: "",
+				name:   "Should get all portal apps for user_4 with no role filter",
+				userID: "user_4",
 				expectedApps: map[types.PortalAppID]*types.PortalApp{
 					"test_app_2": testdata.PortalApps["test_app_2"],
 				},
 			},
 			{
-				name:       "Should get portal apps where user_1 is OWNER",
-				userID:     "user_1",
-				roleFilter: types.RoleOwner,
+				name:    "Should get portal apps where user_1 is OWNER",
+				userID:  "user_1",
+				options: PortalAppsOptions{RoleNameFilter: types.RoleOwner},
 				expectedApps: map[types.PortalAppID]*types.PortalApp{
 					"test_app_1": testdata.PortalApps["test_app_1"],
 				},
 			},
 			{
-				name:       "Should get portal apps where user_6 is ADMIN",
-				userID:     "user_6",
-				roleFilter: types.RoleAdmin,
+				name:    "Should get portal apps where user_6 is ADMIN",
+				userID:  "user_6",
+				options: PortalAppsOptions{RoleNameFilter: types.RoleAdmin},
 				expectedApps: map[types.PortalAppID]*types.PortalApp{
 					"test_app_3": testdata.PortalApps["test_app_3"],
 				},
 			},
 			{
-				name:       "Should get portal apps where user_7 is MEMBER",
-				userID:     "user_7",
-				roleFilter: types.RoleMember,
+				name:    "Should get portal apps where user_7 is MEMBER",
+				userID:  "user_7",
+				options: PortalAppsOptions{RoleNameFilter: types.RoleMember},
 				expectedApps: map[types.PortalAppID]*types.PortalApp{
 					"test_app_3": testdata.PortalApps["test_app_3"],
 				},
@@ -295,13 +305,24 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				portalApps, err := ts.client1.GetPortalAppsByUser(context.Background(), test.userID, test.roleFilter)
+				var portalApps []*types.PortalApp
+				var err error
+
+				if test.options.RoleNameFilter != "" {
+					portalApps, err = ts.client1.GetPortalAppsByUser(context.Background(), test.userID, test.options)
+				} else {
+					portalApps, err = ts.client1.GetPortalAppsByUser(context.Background(), test.userID)
+				}
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedApps, portalAppsToMap(portalApps))
 
-					portalApps, err = ts.client2.GetPortalAppsByUser(context.Background(), test.userID, test.roleFilter)
+					if test.options.RoleNameFilter != "" {
+						portalApps, err = ts.client2.GetPortalAppsByUser(context.Background(), test.userID, test.options)
+					} else {
+						portalApps, err = ts.client2.GetPortalAppsByUser(context.Background(), test.userID)
+					}
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedApps, portalAppsToMap(portalApps))
 				}

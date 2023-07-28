@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/pokt-foundation/portal-db/v2/types"
@@ -43,14 +42,14 @@ type (
 		// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
 		GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error)
 		// GetAllChains returns all chains - GET `/v2/chain`
-		GetAllChains(ctx context.Context, includeInactive bool) ([]*types.Chain, error)
+		GetAllChains(ctx context.Context, options ...ChainsOptions) ([]*types.Chain, error)
 
 		// GetPortalAppByID returns a single Portal App by its ID - GET `/v2/portal_app/{id}`
 		GetPortalAppByID(ctx context.Context, portalAppID types.PortalAppID) (*types.PortalApp, error)
 		// GetAllPortalApps returns all Portal Apps - GET `/v2/portal_app`
 		GetAllPortalApps(ctx context.Context) ([]*types.PortalApp, error)
 		// GetPortalAppsByUser fetches all portal applications - GET `/v2/user/{userID}/portal_app`
-		GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error)
+		GetPortalAppsByUser(ctx context.Context, userID types.UserID, options ...PortalAppsOptions) ([]*types.PortalApp, error)
 
 		// GetPortalAppsForMiddleware returns all Portal Apps - GET `/v2/middleware/portal_app`
 		GetPortalAppsForMiddleware(ctx context.Context) ([]*types.PortalAppLite, error)
@@ -129,6 +128,13 @@ type (
 		RemoveBlockedContract(ctx context.Context, address types.BlockedAddress) (map[string]string, error)
 	}
 
+	ChainsOptions struct {
+		IncludeInactive bool
+	}
+	PortalAppsOptions struct {
+		RoleNameFilter types.RoleName
+	}
+
 	basePath   string
 	subPath    string
 	APIVersion string
@@ -177,6 +183,8 @@ var (
 	errInvalidGigastakeAppJSON             error = errors.New("invalid gigastake app JSON")
 	errInvalidActiveStatusJSON             error = errors.New("invalid active status JSON")
 	errInvalidBlockedContractJSON          error = errors.New("invalid blocked contract JSON")
+
+	errMoreThanOneOption error = errors.New("may not provider more than one options parameter")
 
 	errResponseNotOK error = errors.New("Response not OK")
 )
@@ -241,11 +249,20 @@ func (db *DBClient) GetChainByID(ctx context.Context, chainID types.RelayChainID
 }
 
 // GetAllChains returns all chains - GET `/v2/chain`
-func (db *DBClient) GetAllChains(ctx context.Context, includeInactive bool) ([]*types.Chain, error) {
+func (db *DBClient) GetAllChains(ctx context.Context, optionParams ...ChainsOptions) ([]*types.Chain, error) {
+	if len(optionParams) > 1 {
+		return nil, errMoreThanOneOption
+	}
+
 	endpoint := db.v2BasePath(chainPath)
 
-	if includeInactive {
-		endpoint = fmt.Sprintf("%s?include_inactive=%s", endpoint, strconv.FormatBool(includeInactive))
+	options := ChainsOptions{}
+	if len(optionParams) == 1 {
+		options = optionParams[0]
+	}
+
+	if options.IncludeInactive {
+		endpoint = fmt.Sprintf("%s?include_inactive=true", endpoint)
 	}
 
 	return getReq[[]*types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
@@ -272,12 +289,24 @@ func (db *DBClient) GetAllPortalApps(ctx context.Context) ([]*types.PortalApp, e
 }
 
 // GetPortalAppsByUser fetches all portal applications - GET `/v2/user/{userID}/portal_app`
-func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error) {
+func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID, optionParams ...PortalAppsOptions) ([]*types.PortalApp, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
+	if len(optionParams) > 1 {
+		return nil, errMoreThanOneOption
+	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s?filter=%s", db.v2BasePath(userPath), userID, portalAppPath, filter)
+	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(userPath), userID, portalAppPath)
+
+	options := PortalAppsOptions{}
+	if len(optionParams) > 0 {
+		options = optionParams[0]
+	}
+
+	if options.RoleNameFilter != "" {
+		endpoint = fmt.Sprintf("%s?filter=%s", endpoint, options.RoleNameFilter)
+	}
 
 	return getReq[[]*types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
