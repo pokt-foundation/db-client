@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pokt-foundation/portal-db/v2/types"
@@ -42,17 +43,20 @@ type (
 		// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
 		GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error)
 		// GetAllChains returns all chains - GET `/v2/chain`
-		GetAllChains(ctx context.Context) ([]*types.Chain, error)
+		GetAllChains(ctx context.Context, options ...ChainOptions) ([]*types.Chain, error)
 
 		// GetPortalAppByID returns a single Portal App by its ID - GET `/v2/portal_app/{id}`
 		GetPortalAppByID(ctx context.Context, portalAppID types.PortalAppID) (*types.PortalApp, error)
 		// GetAllPortalApps returns all Portal Apps - GET `/v2/portal_app`
-		GetAllPortalApps(ctx context.Context) ([]*types.PortalApp, error)
+		GetAllPortalApps(ctx context.Context, options ...PortalAppOptions) ([]*types.PortalApp, error)
 		// GetPortalAppsByUser fetches all portal applications - GET `/v2/user/{userID}/portal_app`
-		GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error)
+		GetPortalAppsByUser(ctx context.Context, userID types.UserID, options ...PortalAppOptions) ([]*types.PortalApp, error)
+
+		// GetPortalAppsForMiddleware returns all Portal Apps - GET `/v2/middleware/portal_app`
+		GetPortalAppsForMiddleware(ctx context.Context) ([]*types.PortalAppLite, error)
 
 		// GetAllAccounts returns all Accounts - GET `/v2/account`
-		GetAllAccounts(ctx context.Context) ([]*types.Account, error)
+		GetAllAccounts(ctx context.Context, options ...AccountOptions) ([]*types.Account, error)
 		// GetAccountByID returns a single Account by its account ID - GET `/v2/account/{id}`
 		GetAccountByID(ctx context.Context, accountID types.AccountID) (*types.Account, error)
 		// GetAccountsByUser returns all accounts for a given user ID - GET `/v2/user/{userID}/account`
@@ -62,6 +66,9 @@ type (
 		GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error)
 		// GetPortalUserIDFromProviderUserID returns the Portal User ID for a given auth provider user ID - GET `/v2/user/{userID}`
 		GetPortalUserIDFromProviderUserID(ctx context.Context, providerUserID types.ProviderUserID) (types.UserID, error)
+
+		// GetAllPlans returns all plans - GET `/v2/plan`
+		GetAllPlans(ctx context.Context) ([]types.Plan, error)
 
 		// GetBlockedContracts returns all blocked contracts - GET `/v2/blocked_contract`
 		GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error)
@@ -74,7 +81,7 @@ type (
 		// CreateGigastakeApp creates a new Gigastake app in the DB - POST `/v2/chain/gigastake`
 		CreateGigastakeApp(ctx context.Context, gigastakeAppInput types.GigastakeApp) (*types.GigastakeApp, error)
 		// UpdateChain updates an existing blockchain in the DB - PUT `/v2/chain/{id}`
-		UpdateChain(ctx context.Context, chainUpdate types.Chain) (*types.Chain, error)
+		UpdateChain(ctx context.Context, chainUpdate types.UpdateChain) (*types.Chain, error)
 		// UpdateGigastakeApp updates a Gigastake app in the DB - PUT `/v2/chain/gigastake`
 		UpdateGigastakeApp(ctx context.Context, updateGigastakeApp types.UpdateGigastakeApp) (*types.UpdateGigastakeApp, error)
 		// ActivateChain activates or deactivates a blockchain by ID in the DB - PUT `/v2/chain/{id}/activate`
@@ -125,6 +132,31 @@ type (
 	basePath   string
 	subPath    string
 	APIVersion string
+
+	QueryParam        string
+	commonQueryParams struct {
+		includeDeleted QueryParam
+	}
+	chainQueryParams struct {
+		includeInactive      QueryParam
+		excludeGigastakeApps QueryParam
+	}
+	portalAppQueryParams struct {
+		RoleNameFilters QueryParam
+	}
+
+	ChainOptions struct {
+		ExcludeGigastakeApps bool
+		IncludeInactive      bool
+		IncludeDeleted       bool
+	}
+	PortalAppOptions struct {
+		RoleNameFilters []types.RoleName
+		IncludeDeleted  bool
+	}
+	AccountOptions struct {
+		IncludeDeleted bool
+	}
 )
 
 const (
@@ -132,7 +164,9 @@ const (
 	portalAppPath       basePath = "portal_app"
 	accountPath         basePath = "account"
 	userPath            basePath = "user"
+	planPath            basePath = "plan"
 	blockedContractPath basePath = "blocked_contract"
+	middlewarePath      basePath = "middleware"
 
 	gigastakePath      subPath = "gigastake"
 	activatePath       subPath = "activate"
@@ -145,6 +179,17 @@ const (
 )
 
 var (
+	commonParams = commonQueryParams{
+		includeDeleted: "include_deleted",
+	}
+	ChainParams = chainQueryParams{
+		includeInactive:      "include_inactive",
+		excludeGigastakeApps: "exclude_gigastake_apps",
+	}
+	PortalAppParams = portalAppQueryParams{
+		RoleNameFilters: "filters",
+	}
+
 	errBaseURLNotProvided error = errors.New("base URL not provided")
 	errAPIKeyNotProvided  error = errors.New("API key not provided")
 
@@ -159,6 +204,7 @@ var (
 	errNoPlanTypeSet      error = errors.New("no plan type set")
 	errNoBlockedAddress   error = errors.New("no blocked address provided")
 
+	errInvalidRoleName                     error = errors.New("invalid role name filter provided")
 	errInvalidPortalAppJSON                error = errors.New("invalid portal app JSON")
 	errInvalidFirstDateSurpassedUpdateJSON error = errors.New("invalid first date surpassed update JSON")
 	errInvalidAccountJSON                  error = errors.New("invalid account JSON")
@@ -168,6 +214,8 @@ var (
 	errInvalidGigastakeAppJSON             error = errors.New("invalid gigastake app JSON")
 	errInvalidActiveStatusJSON             error = errors.New("invalid active status JSON")
 	errInvalidBlockedContractJSON          error = errors.New("invalid blocked contract JSON")
+
+	errMoreThanOneOption error = errors.New("may not provider more than one options parameter")
 
 	errResponseNotOK error = errors.New("Response not OK")
 )
@@ -232,8 +280,28 @@ func (db *DBClient) GetChainByID(ctx context.Context, chainID types.RelayChainID
 }
 
 // GetAllChains returns all chains - GET `/v2/chain`
-func (db *DBClient) GetAllChains(ctx context.Context) ([]*types.Chain, error) {
+func (db *DBClient) GetAllChains(ctx context.Context, optionParams ...ChainOptions) ([]*types.Chain, error) {
 	endpoint := db.v2BasePath(chainPath)
+
+	options := ChainOptions{}
+	if len(optionParams) > 0 {
+		options = optionParams[0]
+	}
+
+	queryParams := make([]string, 0)
+	if options.IncludeInactive {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", ChainParams.includeInactive, options.IncludeInactive))
+	}
+	if options.ExcludeGigastakeApps {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", ChainParams.excludeGigastakeApps, options.ExcludeGigastakeApps))
+	}
+	if options.IncludeDeleted {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	}
+
+	if len(queryParams) > 0 {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, strings.Join(queryParams, "&"))
+	}
 
 	return getReq[[]*types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
@@ -252,28 +320,102 @@ func (db *DBClient) GetPortalAppByID(ctx context.Context, portalAppID types.Port
 }
 
 // GetAllPortalApps returns all Portal Apps - GET `/v2/portal_app`
-func (db *DBClient) GetAllPortalApps(ctx context.Context) ([]*types.PortalApp, error) {
+func (db *DBClient) GetAllPortalApps(ctx context.Context, optionParams ...PortalAppOptions) ([]*types.PortalApp, error) {
+	if len(optionParams) > 1 {
+		return nil, errMoreThanOneOption
+	}
+
 	endpoint := db.v2BasePath(portalAppPath)
+
+	options := PortalAppOptions{}
+	if len(optionParams) > 0 {
+		options = optionParams[0]
+	}
+
+	queryParams := make([]string, 0)
+
+	if options.IncludeDeleted {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	}
+
+	if len(queryParams) > 0 {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, strings.Join(queryParams, "&"))
+	}
 
 	return getReq[[]*types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 // GetPortalAppsByUser fetches all portal applications - GET `/v2/user/{userID}/portal_app`
-func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID, filter types.RoleName) ([]*types.PortalApp, error) {
+func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID, optionParams ...PortalAppOptions) ([]*types.PortalApp, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
+	if len(optionParams) > 1 {
+		return nil, errMoreThanOneOption
+	}
 
-	endpoint := fmt.Sprintf("%s/%s/%s?filter=%s", db.v2BasePath(userPath), userID, portalAppPath, filter)
+	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(userPath), userID, portalAppPath)
+
+	options := PortalAppOptions{}
+	if len(optionParams) > 0 {
+		options = optionParams[0]
+	}
+
+	queryParams := make([]string, 0)
+
+	if len(options.RoleNameFilters) > 0 {
+		roleNameStrs := make([]string, len(options.RoleNameFilters))
+		for i, roleName := range options.RoleNameFilters {
+			if !roleName.IsValid() {
+				return nil, fmt.Errorf("%w: %s", errInvalidRoleName, roleName)
+			}
+			roleNameStrs[i] = string(roleName)
+		}
+		queryParams = append(queryParams, fmt.Sprintf("%s=%s", PortalAppParams.RoleNameFilters, strings.Join(roleNameStrs, ",")))
+	}
+
+	if options.IncludeDeleted {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	}
+
+	if len(queryParams) > 0 {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, strings.Join(queryParams, "&"))
+	}
 
 	return getReq[[]*types.PortalApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetPortalAppsForMiddleware returns all Portal Apps - GET `/v2/middleware/portal_app`
+func (db *DBClient) GetPortalAppsForMiddleware(ctx context.Context) ([]*types.PortalAppLite, error) {
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(middlewarePath), portalAppPath)
+
+	return getReq[[]*types.PortalAppLite](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Account Read Methods -- */
 
 // GetAllAccounts returns all Accounts - GET `/v2/account`
-func (db *DBClient) GetAllAccounts(ctx context.Context) ([]*types.Account, error) {
+func (db *DBClient) GetAllAccounts(ctx context.Context, optionParams ...AccountOptions) ([]*types.Account, error) {
+	if len(optionParams) > 1 {
+		return nil, errMoreThanOneOption
+	}
+
 	endpoint := db.v2BasePath(accountPath)
+
+	options := AccountOptions{}
+	if len(optionParams) > 0 {
+		options = optionParams[0]
+	}
+
+	queryParams := make([]string, 0)
+
+	if options.IncludeDeleted {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	}
+
+	if len(queryParams) > 0 {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, strings.Join(queryParams, "&"))
+	}
 
 	return getReq[[]*types.Account](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
@@ -324,6 +466,15 @@ func (db *DBClient) GetPortalUserIDFromProviderUserID(ctx context.Context, provi
 	return getReq[types.UserID](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
+/* -- Plans Read Methods -- */
+
+// GetAllPlans returns all plans - GET `/v2/plan`
+func (db *DBClient) GetAllPlans(ctx context.Context) ([]types.Plan, error) {
+	endpoint := db.v2BasePath(planPath)
+
+	return getReq[[]types.Plan](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
 /* -- Blocked Contracts Read Methods -- */
 
 // GetBlockedContracts returns all blocked contracts - GET `/v2/blocked_contract`
@@ -362,13 +513,17 @@ func (db *DBClient) CreateGigastakeApp(ctx context.Context, gigastakeAppInput ty
 }
 
 // UpdateChain updates an existing blockchain in the DB - PUT `/v2/chain/{id}`
-func (db *DBClient) UpdateChain(ctx context.Context, chainUpdate types.Chain) (*types.Chain, error) {
+func (db *DBClient) UpdateChain(ctx context.Context, chainUpdate types.UpdateChain) (*types.Chain, error) {
+	if chainUpdate.ID == "" {
+		return nil, errNoChainID
+	}
+
 	chainUpdateJSON, err := json.Marshal(chainUpdate)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidChainJSON, err)
 	}
 
-	endpoint := db.v2BasePath(chainPath)
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(chainPath), chainUpdate.ID)
 
 	return putReq[*types.Chain](endpoint, db.getAuthHeaderForWrite(), chainUpdateJSON, db.httpClient)
 }
