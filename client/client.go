@@ -42,8 +42,14 @@ type (
 	IDBReader interface {
 		// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
 		GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error)
+		// GetGigastakeAppByID returns a single GigastakeApp by its GigastakeAppID - GET `/v2/gigastake/{id}`
+		GetGigastakeAppByID(ctx context.Context, gigastakeAppID types.GigastakeAppID) (*types.GigastakeApp, error)
 		// GetAllChains returns all chains - GET `/v2/chain`
 		GetAllChains(ctx context.Context, options ...ChainOptions) ([]*types.Chain, error)
+		// GetAllGigastakeApps returns all GigastakeApps - GET `/v2/gigastake`
+		GetAllGigastakeApps(ctx context.Context, optionParams ...GigastakeAppOptions) ([]*types.GigastakeApp, error)
+		// GetAllGigastakeAppsByChain returns all GigastakeApps for a single chain ID - GET `/v2/chain/{id}/gigastake`
+		GetAllGigastakeAppsByChain(ctx context.Context, chainID types.RelayChainID) ([]*types.GigastakeApp, error)
 
 		// GetPortalAppByID returns a single Portal App by its ID - GET `/v2/portal_app/{id}`
 		GetPortalAppByID(ctx context.Context, portalAppID types.PortalAppID) (*types.PortalApp, error)
@@ -149,6 +155,9 @@ type (
 		ExcludeGigastakeApps bool
 		IncludeInactive      bool
 		IncludeDeleted       bool
+	}
+	GigastakeAppOptions struct {
+		IncludeDeleted bool
 	}
 	PortalAppOptions struct {
 		RoleNameFilters []types.RoleName
@@ -280,6 +289,17 @@ func (db *DBClient) GetChainByID(ctx context.Context, chainID types.RelayChainID
 	return getReq[*types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
+// GetGigastakeAppByID returns a single GigastakeApp by its GigastakeAppID - GET `/v2/gigastake/{id}`
+func (db *DBClient) GetGigastakeAppByID(ctx context.Context, gigastakeAppID types.GigastakeAppID) (*types.GigastakeApp, error) {
+	if gigastakeAppID == "" {
+		return nil, errNoGigastakeAppID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(basePath(gigastakePath)), gigastakeAppID)
+
+	return getReq[*types.GigastakeApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
 // GetAllChains returns all chains - GET `/v2/chain`
 func (db *DBClient) GetAllChains(ctx context.Context, optionParams ...ChainOptions) ([]*types.Chain, error) {
 	endpoint := db.v2BasePath(chainPath)
@@ -305,6 +325,38 @@ func (db *DBClient) GetAllChains(ctx context.Context, optionParams ...ChainOptio
 	}
 
 	return getReq[[]*types.Chain](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetAllGigastakeApps returns all GigastakeApps - GET `/v2/gigastake`
+func (db *DBClient) GetAllGigastakeApps(ctx context.Context, optionParams ...GigastakeAppOptions) ([]*types.GigastakeApp, error) {
+	endpoint := db.v2BasePath(basePath(gigastakePath))
+
+	options := GigastakeAppOptions{}
+	if len(optionParams) > 0 {
+		options = optionParams[0]
+	}
+
+	queryParams := make([]string, 0)
+	if options.IncludeDeleted {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	}
+
+	if len(queryParams) > 0 {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, strings.Join(queryParams, "&"))
+	}
+
+	return getReq[[]*types.GigastakeApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetAllGigastakeAppsByChain returns all GigastakeApps for a single chain ID - GET `/v2/chain/{id}/gigastake`
+func (db *DBClient) GetAllGigastakeAppsByChain(ctx context.Context, chainID types.RelayChainID) ([]*types.GigastakeApp, error) {
+	if chainID == "" {
+		return nil, errNoChainID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/gigastake", db.v2BasePath(chainPath), chainID)
+
+	return getReq[[]*types.GigastakeApp](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* -- Portal App Read Methods -- */

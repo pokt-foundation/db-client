@@ -131,6 +131,45 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 		}
 	})
 
+	ts.Run("Test_GetGigastakeAppByID", func() {
+		tests := []struct {
+			name           string
+			gigastakeAppID types.GigastakeAppID
+			err            error
+			expectedApp    *types.GigastakeApp
+		}{
+			{
+				name:           "Should get GigastakeApp by ID",
+				gigastakeAppID: "test_gigastake_app_1",
+				expectedApp:    testdata.GigastakeApps["test_gigastake_app_1"],
+			},
+			{
+				name:           "Should return error if GigastakeApp ID is empty",
+				gigastakeAppID: "",
+				err:            errNoGigastakeAppID,
+			},
+			{
+				name:           "Should return error if GigastakeApp does not exist",
+				gigastakeAppID: "9999",
+				err:            fmt.Errorf("Response not OK. 404 Not Found: gigastake app not found"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				app, err := ts.client1.GetGigastakeAppByID(context.Background(), test.gigastakeAppID)
+				ts.Equal(test.err, err)
+
+				if err == nil {
+					ts.Equal(test.expectedApp, app)
+					app, err = ts.client2.GetGigastakeAppByID(context.Background(), test.gigastakeAppID)
+					ts.Equal(test.err, err)
+					ts.Equal(test.expectedApp, app)
+				}
+			})
+		}
+	})
+
 	ts.Run("Test_GetAllChains", func() {
 		tests := []struct {
 			name           string
@@ -189,6 +228,76 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedChains, chainsToMap(chains))
+				}
+			})
+		}
+	})
+
+	ts.Run("Test_GetAllGigastakeApps", func() {
+		tests := []struct {
+			name         string
+			expectedApps map[types.GigastakeAppID]*types.GigastakeApp
+			err          error
+		}{
+			{
+				name:         "Should get all GigastakeApps",
+				expectedApps: testdata.GigastakeApps,
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				gigastakeApps, err := ts.client1.GetAllGigastakeApps(context.Background())
+				ts.Equal(test.err, err)
+
+				if test.err == nil {
+					ts.Equal(test.expectedApps, gigastakeAppsToMap(gigastakeApps))
+
+					gigastakeApps, err = ts.client2.GetAllGigastakeApps(context.Background())
+					ts.Equal(test.err, err)
+					ts.Equal(test.expectedApps, gigastakeAppsToMap(gigastakeApps))
+				}
+			})
+		}
+	})
+
+	ts.Run("Test_GetAllGigastakeAppsByChain", func() {
+		tests := []struct {
+			name         string
+			chainID      types.RelayChainID
+			err          error
+			expectedApps []*types.GigastakeApp
+		}{
+			{
+				name:    "Should get all GigastakeApps by chain ID",
+				chainID: "0001",
+				expectedApps: []*types.GigastakeApp{
+					testdata.GigastakeApps["test_gigastake_app_1"],
+				},
+			},
+			{
+				name:    "Should return error if chain ID is empty",
+				chainID: "",
+				err:     errNoChainID,
+			},
+			{
+				name:    "Should return error if chain does not exist",
+				chainID: "9999",
+				err:     fmt.Errorf("Response not OK. 404 Not Found: chain not found"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				apps, err := ts.client1.GetAllGigastakeAppsByChain(context.Background(), test.chainID)
+				ts.Equal(test.err, err)
+
+				if err == nil {
+					ts.Equal(test.expectedApps, apps)
+
+					apps, err = ts.client2.GetAllGigastakeAppsByChain(context.Background(), test.chainID)
+					ts.Equal(test.err, err)
+					ts.Equal(test.expectedApps, apps)
 				}
 			})
 		}
@@ -2892,6 +3001,14 @@ func chainsToMap(chains []*types.Chain) map[types.RelayChainID]*types.Chain {
 		chainMap[chain.ID] = chain
 	}
 	return chainMap
+}
+
+func gigastakeAppsToMap(apps []*types.GigastakeApp) map[types.GigastakeAppID]*types.GigastakeApp {
+	appMap := make(map[types.GigastakeAppID]*types.GigastakeApp)
+	for _, app := range apps {
+		appMap[app.ID] = app
+	}
+	return appMap
 }
 
 func portalAppsToMap(apps []*types.PortalApp) map[types.PortalAppID]*types.PortalApp {
