@@ -1,9 +1,9 @@
 module github.com/pokt-foundation/db-client/v2
 
-go 1.20
+go 1.21
 
 require (
-	github.com/pokt-foundation/portal-db/v2 v2.5.2
+	github.com/pokt-foundation/portal-db/v2 v2.6.0
 	github.com/stretchr/testify v1.8.1
 )
 

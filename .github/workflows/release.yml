@@ -9,13 +9,15 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
+        with:
+          go-version: 1.21
 
       - name: Set up cache
         uses: actions/cache@v3
