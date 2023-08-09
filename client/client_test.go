@@ -869,7 +869,6 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					test.expected.ID = createdGigastakeApp.ID
 					test.expected.CreatedAt = timestamp
 					test.expected.UpdatedAt = timestamp
-					test.expected.PrivateKey = ""
 
 					ts.Equal(test.expected, createdGigastakeApp)
 
@@ -999,14 +998,15 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 	ts.Run("Test_UpdateGigastakeApp", func() {
 		tests := []struct {
 			name               string
+			gigastakeAppID     types.GigastakeAppID
 			gigastakeAppUpdate types.UpdateGigastakeApp
 			err                error
 			expected           *types.UpdateGigastakeApp
 		}{
 			{
-				name: "Should update GigastakeApp ChainIDs in the database",
+				name:           "Should update GigastakeApp ChainIDs in the database",
+				gigastakeAppID: "test_gigastake_app_1",
 				gigastakeAppUpdate: types.UpdateGigastakeApp{
-					ID:       "test_gigastake_app_1",
 					Name:     "pokt_gigastake",
 					ChainIDs: []types.RelayChainID{"0001", "0040"},
 				},
@@ -1018,7 +1018,8 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				},
 			},
 			{
-				name: "Should update both GigastakeApp name and ChainIDs in the database",
+				name:           "Should update both GigastakeApp name and ChainIDs in the database",
+				gigastakeAppID: "test_gigastake_app_1",
 				gigastakeAppUpdate: types.UpdateGigastakeApp{
 					ID:       "test_gigastake_app_1",
 					Name:     "pokt_gigastake_updated",
@@ -1032,9 +1033,9 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				},
 			},
 			{
-				name: "Should update both GigastakeApp name and ChainIDs in the database back to original values",
+				name:           "Should update both GigastakeApp name and ChainIDs in the database back to original values",
+				gigastakeAppID: "test_gigastake_app_1",
 				gigastakeAppUpdate: types.UpdateGigastakeApp{
-					ID:       "test_gigastake_app_1",
 					Name:     "pokt_gigastake",
 					ChainIDs: []types.RelayChainID{"0001"},
 				},
@@ -1046,18 +1047,24 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				},
 			},
 			{
-				name: "Should return an error if the GigastakeApp name is empty",
+				name:           "Should return an error if the GigastakeApp ID is empty",
+				gigastakeAppID: "",
+				err:            errNoGigastakeAppID,
+				expected:       nil,
+			},
+			{
+				name:           "Should return an error if the GigastakeApp name is empty",
+				gigastakeAppID: "test_gigastake_app_1",
 				gigastakeAppUpdate: types.UpdateGigastakeApp{
-					ID:   "test_gigastake_app_1",
 					Name: "",
 				},
 				err:      fmt.Errorf("Response not OK. 500 Internal Server Error: gigastake app name cannot be empty"),
 				expected: nil,
 			},
 			{
-				name: "Should return an error if the GigastakeApp ChainIDs is empty",
+				name:           "Should return an error if the GigastakeApp ChainIDs is empty",
+				gigastakeAppID: "test_gigastake_app_1",
 				gigastakeAppUpdate: types.UpdateGigastakeApp{
-					ID:       "test_gigastake_app_1",
 					Name:     "whatever",
 					ChainIDs: []types.RelayChainID{},
 				},
@@ -1065,9 +1072,9 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				expected: nil,
 			},
 			{
-				name: "Should return an error if the chain doesn't exist",
+				name:           "Should return an error if the chain doesn't exist",
+				gigastakeAppID: "test_gigastake_app_1",
 				gigastakeAppUpdate: types.UpdateGigastakeApp{
-					ID:       "test_gigastake_app_1",
 					Name:     "whatever",
 					ChainIDs: []types.RelayChainID{"0666"},
 				},
@@ -1078,7 +1085,7 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				updatedGigastakeApp, err := ts.client1.UpdateGigastakeApp(context.Background(), test.gigastakeAppUpdate)
+				updatedGigastakeApp, err := ts.client1.UpdateGigastakeApp(context.Background(), test.gigastakeAppID, test.gigastakeAppUpdate)
 				ts.Equal(test.err, err)
 
 				if err == nil {

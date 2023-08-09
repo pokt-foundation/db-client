@@ -82,8 +82,8 @@ type (
 		CreateGigastakeApp(ctx context.Context, gigastakeAppInput types.GigastakeApp) (*types.GigastakeApp, error)
 		// UpdateChain updates an existing blockchain in the DB - PUT `/v2/chain/{id}`
 		UpdateChain(ctx context.Context, chainUpdate types.UpdateChain) (*types.Chain, error)
-		// UpdateGigastakeApp updates a Gigastake app in the DB - PUT `/v2/chain/gigastake`
-		UpdateGigastakeApp(ctx context.Context, updateGigastakeApp types.UpdateGigastakeApp) (*types.UpdateGigastakeApp, error)
+		// UpdateGigastakeApp updates a Gigastake app in the DB - PUT `/v2/chain/gigastake/{id}`
+		UpdateGigastakeApp(ctx context.Context, id types.GigastakeAppID, updateGigastakeApp types.UpdateGigastakeApp) (*types.UpdateGigastakeApp, error)
 		// ActivateChain activates or deactivates a blockchain by ID in the DB - PUT `/v2/chain/{id}/activate`
 		ActivateChain(ctx context.Context, chainID types.RelayChainID, active bool) (bool, error)
 
@@ -195,6 +195,7 @@ var (
 
 	errNoUserID           error = errors.New("no user ID")
 	errNoChainID          error = errors.New("no chain ID")
+	errNoGigastakeAppID   error = errors.New("no gigastake app ID")
 	errNoPortalAppID      error = errors.New("no portal app ID")
 	errNoAccountID        error = errors.New("no account ID")
 	errNoRoleName         error = errors.New("no role name")
@@ -528,14 +529,18 @@ func (db *DBClient) UpdateChain(ctx context.Context, chainUpdate types.UpdateCha
 	return putReq[*types.Chain](endpoint, db.getAuthHeaderForWrite(), chainUpdateJSON, db.httpClient)
 }
 
-// UpdateGigastakeApp updates a Gigastake app in the DB - PUT `/v2/chain/gigastake`
-func (db *DBClient) UpdateGigastakeApp(ctx context.Context, updateGigastakeApp types.UpdateGigastakeApp) (*types.UpdateGigastakeApp, error) {
+// UpdateGigastakeApp updates a Gigastake app in the DB - PUT `/v2/chain/gigastake/{id}`
+func (db *DBClient) UpdateGigastakeApp(ctx context.Context, id types.GigastakeAppID, updateGigastakeApp types.UpdateGigastakeApp) (*types.UpdateGigastakeApp, error) {
+	if id == "" {
+		return nil, errNoGigastakeAppID
+	}
+
 	updateGigastakeAppJSON, err := json.Marshal(updateGigastakeApp)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errInvalidGigastakeAppJSON, err)
 	}
 
-	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(chainPath), gigastakePath)
+	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(chainPath), gigastakePath, id)
 
 	return putReq[*types.UpdateGigastakeApp](endpoint, db.getAuthHeaderForWrite(), updateGigastakeAppJSON, db.httpClient)
 }
