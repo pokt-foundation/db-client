@@ -188,7 +188,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				expectedChains: testdata.Chains,
 				gigastakeApps:  testdata.GigastakeApps,
 				options: ChainOptions{
-					IncludeInactive: true,
+					IncludeInactive: BoolPtr(true),
 				},
 			},
 		}
@@ -210,7 +210,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				var chains []*types.Chain
 				var err error
 
-				if test.options.IncludeInactive {
+				if test.options.IncludeInactive != nil && *test.options.IncludeInactive {
 					chains, err = ts.client1.GetAllChains(context.Background(), test.options)
 				} else {
 					chains, err = ts.client1.GetAllChains(context.Background())
@@ -220,7 +220,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				if test.err == nil {
 					ts.Equal(test.expectedChains, chainsToMap(chains))
 
-					if test.options.IncludeInactive {
+					if test.options.IncludeInactive != nil && *test.options.IncludeInactive {
 						chains, err = ts.client2.GetAllChains(context.Background(), test.options)
 					} else {
 						chains, err = ts.client2.GetAllChains(context.Background())

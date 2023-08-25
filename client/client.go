@@ -152,21 +152,25 @@ type (
 	}
 
 	ChainOptions struct {
-		ExcludeGigastakeApps bool
-		IncludeInactive      bool
-		IncludeDeleted       bool
+		ExcludeGigastakeApps *bool
+		IncludeInactive      *bool
+		IncludeDeleted       *bool
 	}
 	GigastakeAppOptions struct {
-		IncludeDeleted bool
+		IncludeDeleted *bool
 	}
 	PortalAppOptions struct {
 		RoleNameFilters []types.RoleName
-		IncludeDeleted  bool
+		IncludeDeleted  *bool
 	}
 	AccountOptions struct {
-		IncludeDeleted bool
+		IncludeDeleted *bool
 	}
 )
+
+func BoolPtr(b bool) *bool {
+	return &b
+}
 
 const (
 	chainPath           basePath = "chain"
@@ -310,14 +314,14 @@ func (db *DBClient) GetAllChains(ctx context.Context, optionParams ...ChainOptio
 	}
 
 	queryParams := make([]string, 0)
-	if options.IncludeInactive {
-		queryParams = append(queryParams, fmt.Sprintf("%s=%t", ChainParams.includeInactive, options.IncludeInactive))
+	if options.IncludeInactive != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", ChainParams.includeInactive, *options.IncludeInactive))
 	}
-	if options.ExcludeGigastakeApps {
-		queryParams = append(queryParams, fmt.Sprintf("%s=%t", ChainParams.excludeGigastakeApps, options.ExcludeGigastakeApps))
+	if options.ExcludeGigastakeApps != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", ChainParams.excludeGigastakeApps, *options.ExcludeGigastakeApps))
 	}
-	if options.IncludeDeleted {
-		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	if options.IncludeDeleted != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, *options.IncludeDeleted))
 	}
 
 	if len(queryParams) > 0 {
@@ -337,8 +341,8 @@ func (db *DBClient) GetAllGigastakeApps(ctx context.Context, optionParams ...Gig
 	}
 
 	queryParams := make([]string, 0)
-	if options.IncludeDeleted {
-		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	if options.IncludeDeleted != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, *options.IncludeDeleted))
 	}
 
 	if len(queryParams) > 0 {
@@ -387,8 +391,8 @@ func (db *DBClient) GetAllPortalApps(ctx context.Context, optionParams ...Portal
 
 	queryParams := make([]string, 0)
 
-	if options.IncludeDeleted {
-		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	if options.IncludeDeleted != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, *options.IncludeDeleted))
 	}
 
 	if len(queryParams) > 0 {
@@ -427,8 +431,8 @@ func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID
 		queryParams = append(queryParams, fmt.Sprintf("%s=%s", PortalAppParams.RoleNameFilters, strings.Join(roleNameStrs, ",")))
 	}
 
-	if options.IncludeDeleted {
-		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	if options.IncludeDeleted != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, *options.IncludeDeleted))
 	}
 
 	if len(queryParams) > 0 {
@@ -462,8 +466,8 @@ func (db *DBClient) GetAllAccounts(ctx context.Context, optionParams ...AccountO
 
 	queryParams := make([]string, 0)
 
-	if options.IncludeDeleted {
-		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, options.IncludeDeleted))
+	if options.IncludeDeleted != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, *options.IncludeDeleted))
 	}
 
 	if len(queryParams) > 0 {
