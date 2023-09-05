@@ -894,6 +894,49 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 			})
 		}
 	})
+
+	/* ------ Portal App ID Read Test ------ */
+
+	ts.Run("Test_GetPortalUserID", func() {
+		tests := []struct {
+			name           string
+			providerUserID string
+			expectedUserID types.UserID
+			err            error
+		}{
+			{
+				name:           "Should fetch Portal User ID for provider user ID auth0|james_holden",
+				providerUserID: "auth0|james_holden",
+				expectedUserID: "user_1",
+			},
+			{
+				name:           "Should fetch Portal User ID for provider user ID auth0|ellen_ripley",
+				providerUserID: "auth0|ellen_ripley",
+				expectedUserID: "user_3",
+			},
+			{
+				name:           "Should fetch Portal User ID for provider user ID github|paul_atreides",
+				providerUserID: "github|paul_atreides",
+				expectedUserID: "user_2",
+			},
+			{
+				name:           "Should fail if passed an invalid user ID",
+				providerUserID: "auth0|george_carlin",
+				err:            fmt.Errorf("Response not OK. 404 Not Found: error in getPortalUserID: user not found for provider user ID"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				userID, err := ts.client1.GetPortalUserID(context.Background(), test.providerUserID)
+				ts.Equal(test.err, err)
+				if test.err == nil {
+					ts.Equal(test.expectedUserID, userID)
+				}
+			})
+		}
+	})
+
 }
 
 func chainsToMap(chains []*types.Chain) map[types.RelayChainID]*types.Chain {

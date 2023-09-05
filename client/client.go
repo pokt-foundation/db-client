@@ -78,6 +78,10 @@ type (
 
 		// GetBlockedContracts returns all blocked contracts - GET `/v2/blocked_contract`
 		GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error)
+
+		// GetPortalUserID returns the Portal User ID for a given provider user ID - GET `/v1/user/{id}/portal_id`
+		// TODO remove once portal user ID is encoded in PUB JWT
+		GetPortalUserID(ctx context.Context, providerUserID string) (types.UserID, error)
 	}
 
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
@@ -539,6 +543,20 @@ func (db *DBClient) GetBlockedContracts(ctx context.Context) (types.GlobalBlocke
 	endpoint := db.v2BasePath(blockedContractPath)
 
 	return getReq[types.GlobalBlockedContracts](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+/* -- Portal User ID Read Methods -- */
+
+// GetPortalUserID returns the Portal User ID for a given provider user ID - GET `/v1/user/{id}/portal_id`
+// TODO remove once portal user ID is encoded in PUB JWT
+func (db *DBClient) GetPortalUserID(ctx context.Context, providerUserID string) (types.UserID, error) {
+	if providerUserID == "" {
+		return types.UserID(""), errNoUserID
+	}
+
+	endpoint := fmt.Sprintf("%s/v1/user/%s/portal_id", db.config.BaseURL, providerUserID)
+
+	return getReq[types.UserID](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* ------------ IDBWriter Methods ------------ */
