@@ -70,18 +70,18 @@ type (
 
 		// GetUserPermissionByUserID returns all PortalApp permissions for a given provider user ID - GET `/v2/user/{userID}/permission`
 		GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error)
-		// GetPortalUserIDFromProviderUserID returns the Portal User ID for a given auth provider user ID - GET `/v2/user/{userID}`
-		GetPortalUserIDFromProviderUserID(ctx context.Context, providerUserID types.ProviderUserID) (types.UserID, error)
+		// GetPortalUser returns the Portal User for a given user ID, either provider ID or portal ID - GET `/v2/user/{userID}?full_details=true`
+		// The userID is a plain string because you can provide the method with either a provider user ID or a portal user ID
+		GetPortalUser(ctx context.Context, userID string) (*types.User, error)
+		// GetPortalUserID returns the Portal User for a given user ID, either provider ID or portal ID - GET `/v2/user/{userID}`
+		// The userID is a plain string because you can provide the method with either a provider user ID or a portal user ID
+		GetPortalUserID(ctx context.Context, userID string) (types.UserID, error)
 
 		// GetAllPlans returns all plans - GET `/v2/plan`
 		GetAllPlans(ctx context.Context) ([]types.Plan, error)
 
 		// GetBlockedContracts returns all blocked contracts - GET `/v2/blocked_contract`
 		GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error)
-
-		// GetPortalUserID returns the Portal User ID for a given provider user ID - GET `/v1/user/{id}/portal_id`
-		// TODO remove once portal user ID is encoded in PUB JWT
-		GetPortalUserID(ctx context.Context, providerUserID string) (types.UserID, error)
 	}
 
 	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
@@ -516,13 +516,26 @@ func (db *DBClient) GetUserPermissionByUserID(ctx context.Context, providerUserI
 	return getReq[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
-// GetPortalUserIDFromProviderUserID returns the Portal User ID for a given auth provider user ID - GET `/v2/user/{userID}`
-func (db *DBClient) GetPortalUserIDFromProviderUserID(ctx context.Context, providerUserID types.ProviderUserID) (types.UserID, error) {
-	if providerUserID == "" {
-		return "", errNoUserID
+// GetPortalUser returns the Portal User for a given user ID, either provider ID or portal ID - GET `/v2/user/{userID}?full_details=true`
+// The userID is a plain string because you can provide the method with either a provider user ID or a portal user ID
+func (db *DBClient) GetPortalUser(ctx context.Context, userID string) (*types.User, error) {
+	if userID == "" {
+		return &types.User{}, errNoUserID
 	}
 
-	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(userPath), providerUserID)
+	endpoint := fmt.Sprintf("%s/%s?full_details=true", db.v2BasePath(userPath), userID)
+
+	return getReq[*types.User](endpoint, db.getAuthHeaderForRead(), db.httpClient)
+}
+
+// GetPortalUserID returns the Portal User for a given user ID, either provider ID or portal ID - GET `/v2/user/{userID}`
+// The userID is a plain string because you can provide the method with either a provider user ID or a portal user ID
+func (db *DBClient) GetPortalUserID(ctx context.Context, userID string) (types.UserID, error) {
+	if userID == "" {
+		return types.UserID(""), errNoUserID
+	}
+
+	endpoint := fmt.Sprintf("%s/%s", db.v2BasePath(userPath), userID)
 
 	return getReq[types.UserID](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
@@ -543,20 +556,6 @@ func (db *DBClient) GetBlockedContracts(ctx context.Context) (types.GlobalBlocke
 	endpoint := db.v2BasePath(blockedContractPath)
 
 	return getReq[types.GlobalBlockedContracts](endpoint, db.getAuthHeaderForRead(), db.httpClient)
-}
-
-/* -- Portal User ID Read Methods -- */
-
-// GetPortalUserID returns the Portal User ID for a given provider user ID - GET `/v1/user/{id}/portal_id`
-// TODO remove once portal user ID is encoded in PUB JWT
-func (db *DBClient) GetPortalUserID(ctx context.Context, providerUserID string) (types.UserID, error) {
-	if providerUserID == "" {
-		return types.UserID(""), errNoUserID
-	}
-
-	endpoint := fmt.Sprintf("%s/v1/user/%s/portal_id", db.config.BaseURL, providerUserID)
-
-	return getReq[types.UserID](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }
 
 /* ------------ IDBWriter Methods ------------ */

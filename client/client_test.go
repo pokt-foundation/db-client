@@ -764,69 +764,179 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 		}
 	})
 
-	ts.Run("Test_GetPortalUserIDFromProviderUserID", func() {
+	ts.Run("Test_GetPortalUser", func() {
 		tests := []struct {
-			name                 string
-			providerUserID       types.ProviderUserID
-			expectedPortalUserID types.UserID
-			err                  error
+			name               string
+			userID             string
+			expectedPortalUser *types.User
+			err                error
 		}{
 			{
-				name:                 "Should get Portal User ID for provider user_1",
-				providerUserID:       "auth0|james_holden",
-				expectedPortalUserID: "user_1",
+				name:               "Should get Portal User for provider user_1",
+				userID:             "auth0|james_holden",
+				expectedPortalUser: testdata.Users["user_1"],
 			},
 			{
-				name:                 "Should get Portal User ID for provider user_2",
-				providerUserID:       "auth0|paul_atreides",
-				expectedPortalUserID: "user_2",
+				name:               "Should get Portal User for provider user_2",
+				userID:             "auth0|paul_atreides",
+				expectedPortalUser: testdata.Users["user_2"],
 			},
 			{
-				name:                 "Should get Portal User ID for provider user_3",
-				providerUserID:       "auth0|ellen_ripley",
-				expectedPortalUserID: "user_3",
+				name:               "Should get Portal User for provider user_3",
+				userID:             "auth0|ellen_ripley",
+				expectedPortalUser: testdata.Users["user_3"],
 			},
 			{
-				name:                 "Should get Portal User ID for provider user_4",
-				providerUserID:       "auth0|ulfric_stormcloak",
-				expectedPortalUserID: "user_4",
+				name:               "Should get Portal User for provider user_4",
+				userID:             "auth0|ulfric_stormcloak",
+				expectedPortalUser: testdata.Users["user_4"],
 			},
 			{
-				name:                 "Should get Portal User ID for provider user_5",
-				providerUserID:       "auth0|chrisjen_avasarala",
-				expectedPortalUserID: "user_5",
+				name:               "Should get Portal User for provider user_5",
+				userID:             "auth0|chrisjen_avasarala",
+				expectedPortalUser: testdata.Users["user_5"],
 			},
 			{
-				name:                 "Should get Portal User ID for provider user_6",
-				providerUserID:       "auth0|amos_burton",
-				expectedPortalUserID: "user_6",
+				name:               "Should get Portal User for provider user_6",
+				userID:             "auth0|amos_burton",
+				expectedPortalUser: testdata.Users["user_6"],
 			},
 			{
-				name:                 "Should get Portal User ID for provider user_7",
-				providerUserID:       "auth0|frodo_baggins",
-				expectedPortalUserID: "user_7",
+				name:               "Should get Portal User for provider user_7",
+				userID:             "auth0|frodo_baggins",
+				expectedPortalUser: testdata.Users["user_7"],
 			},
 			{
-				name:           "Should error when user does not exist",
-				providerUserID: "facebook|ron_swanson",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: error in getPortalUserID: user not found for provider user ID"),
+				name:               "Should get Portal User for portal user_1",
+				userID:             "user_1",
+				expectedPortalUser: testdata.Users["user_1"],
 			},
 			{
-				name:           "Should error when no user ID",
-				providerUserID: "",
-				err:            fmt.Errorf("no user ID"),
+				name:               "Should get Portal User for portal user_2",
+				userID:             "user_2",
+				expectedPortalUser: testdata.Users["user_2"],
+			},
+			{
+				name:               "Should get Portal User for portal user_3",
+				userID:             "user_3",
+				expectedPortalUser: testdata.Users["user_3"],
+			},
+			{
+				name:               "Should get Portal User for portal user_4",
+				userID:             "user_4",
+				expectedPortalUser: testdata.Users["user_4"],
+			},
+			{
+				name:               "Should get Portal User for portal user_5",
+				userID:             "user_5",
+				expectedPortalUser: testdata.Users["user_5"],
+			},
+			{
+				name:               "Should get Portal User for portal user_6",
+				userID:             "user_6",
+				expectedPortalUser: testdata.Users["user_6"],
+			},
+			{
+				name:               "Should get Portal User for portal user_7",
+				userID:             "user_7",
+				expectedPortalUser: testdata.Users["user_7"],
+			},
+			{
+				name:   "Should error when user does not exist",
+				userID: "facebook|ron_swanson",
+				err:    fmt.Errorf("Response not OK. 404 Not Found: error in getPortalUser: user not found for ID: facebook|ron_swanson"),
+			},
+			{
+				name:   "Should error when no user ID",
+				userID: "",
+				err:    fmt.Errorf("no user ID"),
 			},
 		}
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				portalUserID, err := ts.client1.GetPortalUserIDFromProviderUserID(context.Background(), test.providerUserID)
+				portalUser, err := ts.client1.GetPortalUser(context.Background(), test.userID)
+				ts.Equal(test.err, err)
+
+				if err == nil {
+					ts.Equal(test.expectedPortalUser, portalUser)
+
+					portalUser, err = ts.client2.GetPortalUser(context.Background(), test.userID)
+					ts.Equal(test.err, err)
+					ts.Equal(test.expectedPortalUser, portalUser)
+				}
+			})
+		}
+	})
+
+	ts.Run("Test_GetPortalUserID", func() {
+		tests := []struct {
+			name                 string
+			userID               string
+			expectedPortalUserID types.UserID
+			err                  error
+		}{
+			{
+				name:                 "Should get Portal User ID for provider user_1",
+				userID:               "auth0|james_holden",
+				expectedPortalUserID: "user_1",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_2",
+				userID:               "auth0|paul_atreides",
+				expectedPortalUserID: "user_2",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_3",
+				userID:               "auth0|ellen_ripley",
+				expectedPortalUserID: "user_3",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_4",
+				userID:               "auth0|ulfric_stormcloak",
+				expectedPortalUserID: "user_4",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_5",
+				userID:               "auth0|chrisjen_avasarala",
+				expectedPortalUserID: "user_5",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_6",
+				userID:               "auth0|amos_burton",
+				expectedPortalUserID: "user_6",
+			},
+			{
+				name:                 "Should get Portal User ID for provider user_7",
+				userID:               "auth0|frodo_baggins",
+				expectedPortalUserID: "user_7",
+			},
+			{
+				name:                 "Should get Portal User ID for portal user_1",
+				userID:               "user_1",
+				expectedPortalUserID: "user_1",
+			},
+			{
+				name:   "Should error when user does not exist",
+				userID: "facebook|ron_swanson",
+				err:    fmt.Errorf("Response not OK. 404 Not Found: error in getPortalUser: user not found for ID: facebook|ron_swanson"),
+			},
+			{
+				name:   "Should error when no user ID",
+				userID: "",
+				err:    fmt.Errorf("no user ID"),
+			},
+		}
+
+		for _, test := range tests {
+			ts.Run(test.name, func() {
+				portalUserID, err := ts.client1.GetPortalUserID(context.Background(), test.userID)
 				ts.Equal(test.err, err)
 
 				if err == nil {
 					ts.Equal(test.expectedPortalUserID, portalUserID)
 
-					portalUserID, err = ts.client2.GetPortalUserIDFromProviderUserID(context.Background(), test.providerUserID)
+					portalUserID, err = ts.client2.GetPortalUserID(context.Background(), test.userID)
 					ts.Equal(test.err, err)
 					ts.Equal(test.expectedPortalUserID, portalUserID)
 				}
@@ -922,7 +1032,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 			{
 				name:           "Should fail if passed an invalid user ID",
 				providerUserID: "auth0|george_carlin",
-				err:            fmt.Errorf("Response not OK. 404 Not Found: error in getPortalUserID: user not found for provider user ID"),
+				err:            fmt.Errorf("Response not OK. 404 Not Found: error in getPortalUser: user not found for ID: auth0|george_carlin"),
 			},
 		}
 
