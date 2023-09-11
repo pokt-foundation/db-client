@@ -411,73 +411,49 @@ func (_m *MockIDBReader) GetPortalAppsForMiddleware(ctx context.Context) ([]*typ
 	return r0, r1
 }
 
-// GetPortalUserID provides a mock function with given fields: ctx, providerUserID
-func (_m *MockIDBReader) GetPortalUserID(ctx context.Context, providerUserID string) (types.UserID, error) {
-	ret := _m.Called(ctx, providerUserID)
+// GetPortalUser provides a mock function with given fields: ctx, userID
+func (_m *MockIDBReader) GetPortalUser(ctx context.Context, userID string) (*types.User, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 *types.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*types.User, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *types.User); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetPortalUserID provides a mock function with given fields: ctx, userID
+func (_m *MockIDBReader) GetPortalUserID(ctx context.Context, userID string) (types.UserID, error) {
+	ret := _m.Called(ctx, userID)
 
 	var r0 types.UserID
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, string) (types.UserID, error)); ok {
-		return rf(ctx, providerUserID)
+		return rf(ctx, userID)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string) types.UserID); ok {
-		r0 = rf(ctx, providerUserID)
+		r0 = rf(ctx, userID)
 	} else {
 		r0 = ret.Get(0).(types.UserID)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, providerUserID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetPortalUserIDFromProviderUserID provides a mock function with given fields: ctx, providerUserID
-func (_m *MockIDBReader) GetPortalUserIDFromProviderUserID(ctx context.Context, providerUserID types.ProviderUserID) (types.UserID, error) {
-	ret := _m.Called(ctx, providerUserID)
-
-	var r0 types.UserID
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, types.ProviderUserID) (types.UserID, error)); ok {
-		return rf(ctx, providerUserID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, types.ProviderUserID) types.UserID); ok {
-		r0 = rf(ctx, providerUserID)
-	} else {
-		r0 = ret.Get(0).(types.UserID)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, types.ProviderUserID) error); ok {
-		r1 = rf(ctx, providerUserID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetUserPermissionByUserID provides a mock function with given fields: ctx, providerUserID
-func (_m *MockIDBReader) GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error) {
-	ret := _m.Called(ctx, providerUserID)
-
-	var r0 *types.UserPermissions
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, types.ProviderUserID) (*types.UserPermissions, error)); ok {
-		return rf(ctx, providerUserID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, types.ProviderUserID) *types.UserPermissions); ok {
-		r0 = rf(ctx, providerUserID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.UserPermissions)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, types.ProviderUserID) error); ok {
-		r1 = rf(ctx, providerUserID)
+		r1 = rf(ctx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}

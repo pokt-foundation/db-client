@@ -68,8 +68,6 @@ type (
 		// GetAccountsByUser returns all accounts for a given user ID - GET `/v2/user/{userID}/account`
 		GetAccountsByUser(ctx context.Context, userID types.UserID) ([]*types.Account, error)
 
-		// GetUserPermissionByUserID returns all PortalApp permissions for a given provider user ID - GET `/v2/user/{userID}/permission`
-		GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error)
 		// GetPortalUser returns the Portal User for a given user ID, either provider ID or portal ID - GET `/v2/user/{userID}?full_details=true`
 		// The userID is a plain string because you can provide the method with either a provider user ID or a portal user ID
 		GetPortalUser(ctx context.Context, userID string) (*types.User, error)
@@ -504,17 +502,6 @@ func (db *DBClient) GetAccountsByUser(ctx context.Context, userID types.UserID) 
 }
 
 /* -- User Read Methods -- */
-
-// GetUserPermissionByUserID returns all PortalApp permissions for a given provider user ID - GET `/v2/user/{userID}/permission`
-func (db *DBClient) GetUserPermissionByUserID(ctx context.Context, providerUserID types.ProviderUserID) (*types.UserPermissions, error) {
-	if providerUserID == "" {
-		return nil, errNoUserID
-	}
-
-	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(userPath), providerUserID, permissionPath)
-
-	return getReq[*types.UserPermissions](endpoint, db.getAuthHeaderForRead(), db.httpClient)
-}
 
 // GetPortalUser returns the Portal User for a given user ID, either provider ID or portal ID - GET `/v2/user/{userID}?full_details=true`
 // The userID is a plain string because you can provide the method with either a provider user ID or a portal user ID
