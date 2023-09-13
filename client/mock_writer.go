@@ -560,6 +560,32 @@ func (_m *MockIDBWriter) UpdatePortalAppsFirstDateSurpassed(ctx context.Context,
 	return r0, r1
 }
 
+// UpdateUser provides a mock function with given fields: ctx, user
+func (_m *MockIDBWriter) UpdateUser(ctx context.Context, user types.UpdateUser) (*types.User, error) {
+	ret := _m.Called(ctx, user)
+
+	var r0 *types.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, types.UpdateUser) (*types.User, error)); ok {
+		return rf(ctx, user)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, types.UpdateUser) *types.User); ok {
+		r0 = rf(ctx, user)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, types.UpdateUser) error); ok {
+		r1 = rf(ctx, user)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // WriteAccountUser provides a mock function with given fields: ctx, createUser, _a2
 func (_m *MockIDBWriter) WriteAccountUser(ctx context.Context, createUser types.CreateAccountUserAccess, _a2 time.Time) (map[string]types.UserID, error) {
 	ret := _m.Called(ctx, createUser, _a2)
