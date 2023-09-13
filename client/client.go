@@ -126,6 +126,8 @@ type (
 
 		// CreateUser creates a new User in the database - POST `/v2/user`
 		CreateUser(ctx context.Context, user types.CreateUser) (*types.CreateUserResponse, error)
+		// UpdateUser updates an existing User in the database - PUT `/v2/user`
+		UpdateUser(ctx context.Context, user types.UpdateUser) (*types.User, error)
 		// DeleteUser deletes a User - DELETE `/v2/user/{userID}`
 		DeleteUser(ctx context.Context, userID types.UserID) (map[string]string, error)
 
@@ -849,6 +851,22 @@ func (db *DBClient) CreateUser(ctx context.Context, user types.CreateUser) (*typ
 	endpoint := db.v2BasePath(userPath)
 
 	return postReq[*types.CreateUserResponse](endpoint, db.getAuthHeaderForWrite(), userJSON, db.httpClient)
+}
+
+// UpdateUser updates an existing User in the database - PUT `/v2/user`
+func (db *DBClient) UpdateUser(ctx context.Context, user types.UpdateUser) (*types.User, error) {
+	if user.ID == "" {
+		return nil, errNoUserID
+	}
+
+	userJSON, err := json.Marshal(user)
+	if err != nil {
+		return nil, fmt.Errorf("invalid update user JSON: %w", err)
+	}
+
+	endpoint := db.v2BasePath(userPath)
+
+	return putReq[*types.User](endpoint, db.getAuthHeaderForWrite(), userJSON, db.httpClient)
 }
 
 // DeleteUser deletes a User - DELETE `/v2/user/{userID}`
