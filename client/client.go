@@ -38,6 +38,7 @@ type (
 		IDBReader
 		IDBWriter
 	}
+
 	// IDBReader interface contains read-only methods for interacting with the Pocket HTTP DB
 	IDBReader interface {
 		// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
