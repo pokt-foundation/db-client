@@ -3,7 +3,7 @@ module github.com/pokt-foundation/db-client/v2
 go 1.21
 
 require (
-	github.com/pokt-foundation/portal-db/v2 v2.12.1
+	github.com/pokt-foundation/portal-db/v2 v2.12.3
 	github.com/stretchr/testify v1.8.1
 )
 
