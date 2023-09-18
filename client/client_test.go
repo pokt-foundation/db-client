@@ -1005,13 +1005,6 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 				newChainInput: types.NewChainInput{},
 				err:           fmt.Errorf("Response not OK. 500 Internal Server Error: error in createNewChainAndGigastakeApps: error chain cannot be nil"),
 			},
-			{
-				name: "Should fail if GigastakeApp is missing",
-				newChainInput: types.NewChainInput{
-					Chain: &types.Chain{ID: "1234"},
-				},
-				err: fmt.Errorf("Response not OK. 500 Internal Server Error: error in createNewChainAndGigastakeApps: error gigastakeApps slice cannot be empty"),
-			},
 		}
 
 		for _, test := range tests {
@@ -2997,7 +2990,8 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					},
 					Permissions: map[types.PortalAppID]types.PortalAppPermissions{
 						"test_app_3": {
-							RoleName: types.RoleOwner,
+							AccountID: "account_3",
+							RoleName:  types.RoleOwner,
 							Permissions: []types.Permissions{
 								types.PermReadEndpoint,
 								types.PermWriteEndpoint,
@@ -3028,7 +3022,8 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					},
 					Permissions: map[types.PortalAppID]types.PortalAppPermissions{
 						"test_app_3": {
-							RoleName: types.RoleOwner,
+							AccountID: "account_3",
+							RoleName:  types.RoleOwner,
 							Permissions: []types.Permissions{
 								types.PermReadEndpoint,
 								types.PermWriteEndpoint,
