@@ -67,7 +67,7 @@ type (
 		// GetAccountByID returns a single Account by its account ID - GET `/v2/account/{id}`
 		GetAccountByID(ctx context.Context, accountID types.AccountID) (*types.Account, error)
 		// GetAccountsByUser returns all accounts for a given user ID - GET `/v2/user/{userID}/account`
-		GetAccountsByUser(ctx context.Context, userID types.UserID) ([]*types.Account, error)
+		GetAccountsByUser(ctx context.Context, userID types.UserID, options ...AccountOptions) ([]*types.Account, error)
 
 		// GetPortalUser returns the Portal User for a given user ID, either provider ID or portal ID - GET `/v2/user/{userID}?full_details=true`
 		// The userID is a plain string because you can provide the method with either a provider user ID or a portal user ID
@@ -154,6 +154,11 @@ type (
 	}
 	portalAppQueryParams struct {
 		RoleNameFilters QueryParam
+		Accepted        QueryParam
+	}
+	accountQueryParams struct {
+		RoleNameFilters QueryParam
+		Accepted        QueryParam
 	}
 
 	ChainOptions struct {
@@ -167,9 +172,12 @@ type (
 	PortalAppOptions struct {
 		RoleNameFilters []types.RoleName
 		IncludeDeleted  *bool
+		Accepted        *bool
 	}
 	AccountOptions struct {
-		IncludeDeleted *bool
+		RoleNameFilters []types.RoleName
+		IncludeDeleted  *bool
+		Accepted        *bool
 	}
 )
 
@@ -206,6 +214,11 @@ var (
 	}
 	PortalAppParams = portalAppQueryParams{
 		RoleNameFilters: "filters",
+		Accepted:        "accepted",
+	}
+	AccountParams = accountQueryParams{
+		RoleNameFilters: "filters",
+		Accepted:        "accepted",
 	}
 
 	errBaseURLNotProvided error = errors.New("base URL not provided")
@@ -440,6 +453,10 @@ func (db *DBClient) GetPortalAppsByUser(ctx context.Context, userID types.UserID
 		queryParams = append(queryParams, fmt.Sprintf("%s=%t", commonParams.includeDeleted, *options.IncludeDeleted))
 	}
 
+	if options.Accepted != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", PortalAppParams.Accepted, *options.Accepted))
+	}
+
 	if len(queryParams) > 0 {
 		endpoint = fmt.Sprintf("%s?%s", endpoint, strings.Join(queryParams, "&"))
 	}
@@ -494,12 +511,41 @@ func (db *DBClient) GetAccountByID(ctx context.Context, accountID types.AccountI
 }
 
 // GetAccountsByUser returns all accounts for a given user ID - GET `/v2/user/{userID}/account`
-func (db *DBClient) GetAccountsByUser(ctx context.Context, userID types.UserID) ([]*types.Account, error) {
+func (db *DBClient) GetAccountsByUser(ctx context.Context, userID types.UserID, optionParams ...AccountOptions) ([]*types.Account, error) {
 	if userID == "" {
 		return nil, errNoUserID
 	}
+	if len(optionParams) > 1 {
+		return nil, errMoreThanOneOption
+	}
 
 	endpoint := fmt.Sprintf("%s/%s/%s", db.v2BasePath(userPath), userID, accountPath)
+
+	options := AccountOptions{}
+	if len(optionParams) > 0 {
+		options = optionParams[0]
+	}
+
+	queryParams := make([]string, 0)
+
+	if len(options.RoleNameFilters) > 0 {
+		roleNameStrs := make([]string, len(options.RoleNameFilters))
+		for i, roleName := range options.RoleNameFilters {
+			if !roleName.IsValid() {
+				return nil, fmt.Errorf("%w: %s", errInvalidRoleName, roleName)
+			}
+			roleNameStrs[i] = string(roleName)
+		}
+		queryParams = append(queryParams, fmt.Sprintf("%s=%s", AccountParams.RoleNameFilters, strings.Join(roleNameStrs, ",")))
+	}
+
+	if options.Accepted != nil {
+		queryParams = append(queryParams, fmt.Sprintf("%s=%t", AccountParams.Accepted, *options.Accepted))
+	}
+
+	if len(queryParams) > 0 {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, strings.Join(queryParams, "&"))
+	}
 
 	return getReq[[]*types.Account](endpoint, db.getAuthHeaderForRead(), db.httpClient)
 }

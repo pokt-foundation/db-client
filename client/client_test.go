@@ -1,7 +1,9 @@
 package dbclient
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +16,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
+
+func Plog(args ...interface{}) {
+	for _, arg := range args {
+		var prettyJSON bytes.Buffer
+		jsonArg, _ := json.Marshal(arg)
+		str := string(jsonArg)
+		_ = json.Indent(&prettyJSON, []byte(str), "", "    ")
+		output := prettyJSON.String()
+
+		fmt.Println(output)
+	}
+}
 
 func Test_DBClientImplementsInterfaces(t *testing.T) {
 	tests := []struct {
@@ -347,15 +361,17 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 	ts.Run("Test_GetPortalAppByID", func() {
 		tests := []struct {
-			name        string
-			portalAppID types.PortalAppID
-			expectedApp *types.PortalApp
-			err         error
+			name           string
+			portalAppID    types.PortalAppID
+			portalAppUsers map[types.UserID]*types.AccountUserAccess
+			expectedApp    *types.PortalApp
+			err            error
 		}{
 			{
-				name:        "Should get portal app by ID",
-				portalAppID: "test_app_1",
-				expectedApp: testdata.PortalApps["test_app_1"],
+				name:           "Should get portal app by ID",
+				portalAppID:    "test_app_1",
+				portalAppUsers: testdata.PortalAppUsers["test_app_1"],
+				expectedApp:    testdata.PortalApps["test_app_1"],
 			},
 			{
 				name:        "Should return error if app ID is empty",
@@ -375,6 +391,8 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				ts.Equal(test.err, err)
 
 				if test.err == nil {
+					test.expectedApp.Users = test.portalAppUsers
+
 					ts.Equal(test.expectedApp, portalApp)
 
 					portalApp, err = ts.client2.GetPortalAppByID(context.Background(), test.portalAppID)
@@ -387,13 +405,15 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 	ts.Run("Test_GetAllPortalApps", func() {
 		tests := []struct {
-			name         string
-			expectedApps map[types.PortalAppID]*types.PortalApp
-			err          error
+			name           string
+			expectedApps   map[types.PortalAppID]*types.PortalApp
+			portalAppUsers map[types.PortalAppID]map[types.UserID]*types.AccountUserAccess
+			err            error
 		}{
 			{
-				name:         "Should get all portal apps",
-				expectedApps: testdata.PortalApps,
+				name:           "Should get all portal apps",
+				expectedApps:   testdata.PortalApps,
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 		}
 
@@ -403,6 +423,9 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				ts.Equal(test.err, err)
 
 				if err == nil {
+					for _, portalApp := range test.expectedApps {
+						portalApp.Users = test.portalAppUsers[portalApp.ID]
+					}
 					ts.Equal(test.expectedApps, portalAppsToMap(portalApps))
 
 					portalApps, err = ts.client2.GetAllPortalApps(context.Background())
@@ -415,11 +438,12 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 	ts.Run("Test_GetPortalAppsByUser", func() {
 		tests := []struct {
-			name         string
-			userID       types.UserID
-			options      PortalAppOptions
-			expectedApps map[types.PortalAppID]*types.PortalApp
-			err          error
+			name           string
+			userID         types.UserID
+			options        PortalAppOptions
+			expectedApps   map[types.PortalAppID]*types.PortalApp
+			portalAppUsers map[types.PortalAppID]map[types.UserID]*types.AccountUserAccess
+			err            error
 		}{
 			{
 				name:   "Should get all portal apps for user_4 with no role filter",
@@ -427,6 +451,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				expectedApps: map[types.PortalAppID]*types.PortalApp{
 					"test_app_2": testdata.PortalApps["test_app_2"],
 				},
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 			{
 				name:   "Should get portal apps where user_1 is OWNER",
@@ -439,6 +464,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				expectedApps: map[types.PortalAppID]*types.PortalApp{
 					"test_app_1": testdata.PortalApps["test_app_1"],
 				},
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 			{
 				name:   "Should get portal apps where user_6 is ADMIN",
@@ -451,6 +477,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				expectedApps: map[types.PortalAppID]*types.PortalApp{
 					"test_app_3": testdata.PortalApps["test_app_3"],
 				},
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 			{
 				name:   "Should get portal apps where user_7 is MEMBER",
@@ -463,6 +490,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				expectedApps: map[types.PortalAppID]*types.PortalApp{
 					"test_app_3": testdata.PortalApps["test_app_3"],
 				},
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 			{
 				name:   "Should get portal apps where user_2 is ADMIN or MEMBER",
@@ -477,6 +505,44 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 					"test_app_1": testdata.PortalApps["test_app_1"],
 					"test_app_2": testdata.PortalApps["test_app_2"],
 				},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get portal apps for user_10 where user_10 has not signed up yet",
+				userID: "user_10",
+				options: PortalAppOptions{
+					Accepted: BoolPtr(false),
+				},
+				expectedApps: map[types.PortalAppID]*types.PortalApp{
+					"test_app_3": testdata.PortalApps["test_app_3"],
+				},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get portal apps for user_2 where user_2 has signed up",
+				userID: "user_2",
+				options: PortalAppOptions{
+					Accepted: BoolPtr(true),
+				},
+				expectedApps: map[types.PortalAppID]*types.PortalApp{
+					"test_app_1": testdata.PortalApps["test_app_1"],
+					"test_app_2": testdata.PortalApps["test_app_2"],
+				},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get portal apps for user_3 where user_3 has signed up and is the OWNER",
+				userID: "user_3",
+				options: PortalAppOptions{
+					Accepted: BoolPtr(true),
+					RoleNameFilters: []types.RoleName{
+						types.RoleOwner,
+					},
+				},
+				expectedApps: map[types.PortalAppID]*types.PortalApp{
+					"test_app_2": testdata.PortalApps["test_app_2"],
+				},
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 		}
 
@@ -493,6 +559,9 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				ts.Equal(test.err, err)
 
 				if err == nil {
+					for _, portalApp := range test.expectedApps {
+						portalApp.Users = test.portalAppUsers[portalApp.ID]
+					}
 					ts.Equal(test.expectedApps, portalAppsToMap(portalApps))
 
 					if len(test.options.RoleNameFilters) > 0 {
@@ -567,26 +636,29 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 	ts.Run("Test_GetAccountByID", func() {
 		tests := []struct {
-			name        string
-			accountID   types.AccountID
-			expectedAcc *types.Account
-			assignPlan  *types.Plan
-			assignApp   *types.PortalApp
-			err         error
+			name           string
+			accountID      types.AccountID
+			expectedAcc    *types.Account
+			assignPlan     *types.Plan
+			assignApp      *types.PortalApp
+			assignAppUsers map[types.UserID]*types.AccountUserAccess
+			err            error
 		}{
 			{
-				name:        "Should get an account by its account ID",
-				accountID:   "account_1",
-				assignPlan:  testdata.PayPlans["basic_plan"],
-				assignApp:   testdata.PortalApps["test_app_1"],
-				expectedAcc: testdata.Accounts["account_1"],
+				name:           "Should get an account by its account ID",
+				accountID:      "account_1",
+				assignPlan:     testdata.PayPlans["basic_plan"],
+				assignApp:      testdata.PortalApps["test_app_1"],
+				assignAppUsers: testdata.PortalAppUsers["test_app_1"],
+				expectedAcc:    testdata.Accounts["account_1"],
 			},
 			{
-				name:        "Should get another account by its account ID",
-				accountID:   "account_2",
-				assignPlan:  testdata.PayPlans["pro_plan"],
-				assignApp:   testdata.PortalApps["test_app_2"],
-				expectedAcc: testdata.Accounts["account_2"],
+				name:           "Should get another account by its account ID",
+				accountID:      "account_2",
+				assignPlan:     testdata.PayPlans["pro_plan"],
+				assignApp:      testdata.PortalApps["test_app_2"],
+				assignAppUsers: testdata.PortalAppUsers["test_app_2"],
+				expectedAcc:    testdata.Accounts["account_2"],
 			},
 		}
 
@@ -597,6 +669,7 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				if test.expectedAcc.PortalApps == nil {
 					test.expectedAcc.PortalApps = make(map[types.PortalAppID]*types.PortalApp)
 				}
+				test.assignApp.Users = test.assignAppUsers
 				test.expectedAcc.PortalApps[test.assignApp.ID] = test.assignApp
 
 				account, err := ts.client1.GetAccountByID(context.Background(), test.accountID)
@@ -615,15 +688,17 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 
 	ts.Run("Test_GetAccountsByUser", func() {
 		tests := []struct {
-			name         string
-			userID       types.UserID
-			expectedAccs map[types.AccountID]*types.Account
-			plans        map[types.AccountID]*types.Plan
-			portalApps   map[types.AccountID]map[types.PortalAppID]*types.PortalApp
-			err          error
+			name           string
+			userID         types.UserID
+			options        AccountOptions
+			expectedAccs   map[types.AccountID]*types.Account
+			plans          map[types.AccountID]*types.Plan
+			portalApps     map[types.AccountID]map[types.PortalAppID]*types.PortalApp
+			portalAppUsers map[types.PortalAppID]map[types.UserID]*types.AccountUserAccess
+			err            error
 		}{
 			{
-				name:   "Should get accounts for user_2",
+				name:   "Should get accounts for user_2 with no role filter",
 				userID: "user_2",
 				expectedAccs: map[types.AccountID]*types.Account{
 					"account_1": testdata.Accounts["account_1"],
@@ -637,9 +712,50 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 					"account_1": {"test_app_1": testdata.PortalApps["test_app_1"]},
 					"account_2": {"test_app_2": testdata.PortalApps["test_app_2"]},
 				},
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 			{
-				name:   "Should get accounts for user_1",
+				name:   "Should get accounts for user_2 where user_2 is OWNER",
+				userID: "user_2",
+				options: AccountOptions{
+					RoleNameFilters: []types.RoleName{
+						types.RoleOwner,
+					},
+				},
+				expectedAccs: map[types.AccountID]*types.Account{
+					"account_1": testdata.Accounts["account_1"],
+					"account_2": testdata.Accounts["account_2"],
+				},
+				plans: map[types.AccountID]*types.Plan{
+					"account_1": testdata.PayPlans["basic_plan"],
+					"account_2": testdata.PayPlans["pro_plan"],
+				},
+				portalApps:     map[types.AccountID]map[types.PortalAppID]*types.PortalApp{},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get accounts for user_2 where user_2 is ADMIN",
+				userID: "user_2",
+				options: AccountOptions{
+					RoleNameFilters: []types.RoleName{
+						types.RoleAdmin,
+					},
+				},
+				expectedAccs: map[types.AccountID]*types.Account{
+					"account_1": testdata.Accounts["account_1"],
+					"account_2": testdata.Accounts["account_2"],
+				},
+				plans: map[types.AccountID]*types.Plan{
+					"account_1": testdata.PayPlans["basic_plan"],
+					"account_2": testdata.PayPlans["pro_plan"],
+				},
+				portalApps: map[types.AccountID]map[types.PortalAppID]*types.PortalApp{
+					"account_1": {"test_app_1": testdata.PortalApps["test_app_1"]},
+				},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get accounts for user_1 with no role filter",
 				userID: "user_1",
 				expectedAccs: map[types.AccountID]*types.Account{
 					"account_1": testdata.Accounts["account_1"],
@@ -650,6 +766,80 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				portalApps: map[types.AccountID]map[types.PortalAppID]*types.PortalApp{
 					"account_1": {"test_app_1": testdata.PortalApps["test_app_1"]},
 				},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get accounts for user_1 where user_1 is OWNER",
+				userID: "user_1",
+				options: AccountOptions{
+					RoleNameFilters: []types.RoleName{
+						types.RoleOwner,
+					},
+				},
+				expectedAccs: map[types.AccountID]*types.Account{
+					"account_1": testdata.Accounts["account_1"],
+				},
+				plans: map[types.AccountID]*types.Plan{
+					"account_1": testdata.PayPlans["basic_plan"],
+				},
+				portalApps: map[types.AccountID]map[types.PortalAppID]*types.PortalApp{
+					"account_1": {"test_app_1": testdata.PortalApps["test_app_1"]},
+				},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get accounts for user_10 where user_10 has not signed up yet",
+				userID: "user_10",
+				options: AccountOptions{
+					Accepted: BoolPtr(false),
+				},
+				expectedAccs: map[types.AccountID]*types.Account{
+					"account_3": testdata.Accounts["account_3"],
+				},
+				plans: map[types.AccountID]*types.Plan{
+					"account_3": testdata.PayPlans["startup_plan"],
+				},
+				portalApps: map[types.AccountID]map[types.PortalAppID]*types.PortalApp{
+					"account_3": {"test_app_3": testdata.PortalApps["test_app_3"]},
+				},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get accounts for user_2 where user_2 has signed up",
+				userID: "user_2",
+				options: AccountOptions{
+					Accepted: BoolPtr(true),
+				},
+				expectedAccs: map[types.AccountID]*types.Account{
+					"account_1": testdata.Accounts["account_1"],
+					"account_2": testdata.Accounts["account_2"],
+				},
+				plans: map[types.AccountID]*types.Plan{
+					"account_1": testdata.PayPlans["basic_plan"],
+					"account_2": testdata.PayPlans["pro_plan"],
+				},
+				portalApps: map[types.AccountID]map[types.PortalAppID]*types.PortalApp{
+					"account_1": {"test_app_1": testdata.PortalApps["test_app_1"]},
+					"account_2": {"test_app_2": testdata.PortalApps["test_app_2"]},
+				},
+				portalAppUsers: testdata.PortalAppUsers,
+			},
+			{
+				name:   "Should get accounts for user_2 where user_2 has not signed up yet",
+				userID: "user_2",
+				options: AccountOptions{
+					Accepted: BoolPtr(false),
+				},
+				expectedAccs: map[types.AccountID]*types.Account{
+					"account_1": testdata.Accounts["account_1"],
+					"account_2": testdata.Accounts["account_2"],
+				},
+				plans: map[types.AccountID]*types.Plan{
+					"account_1": testdata.PayPlans["basic_plan"],
+					"account_2": testdata.PayPlans["pro_plan"],
+				},
+				portalApps:     nil,
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 			{
 				name:   "Should get accounts for user_4",
@@ -667,12 +857,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 				portalApps: map[types.AccountID]map[types.PortalAppID]*types.PortalApp{
 					"account_2": {"test_app_2": testdata.PortalApps["test_app_2"]},
 				},
+				portalAppUsers: testdata.PortalAppUsers,
 			},
 		}
 
 		for _, test := range tests {
 			ts.Run(test.name, func() {
-				accounts, err := ts.client1.GetAccountsByUser(context.Background(), test.userID)
+				accounts, err := ts.client1.GetAccountsByUser(context.Background(), test.userID, test.options)
 				ts.Equal(test.err, err)
 
 				if err == nil {
@@ -681,22 +872,27 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 					for id, account := range test.expectedAccs {
 						account.Plan = test.plans[id]
 						account.PortalApps = test.portalApps[id]
+						for _, portalApp := range account.PortalApps {
+							portalApp.Users = test.portalAppUsers[portalApp.ID]
+						}
 					}
 					ts.Equal(test.expectedAccs, accountMap)
 
-					accounts, err = ts.client2.GetAccountsByUser(context.Background(), test.userID)
+					accounts, err = ts.client2.GetAccountsByUser(context.Background(), test.userID, test.options)
 					ts.Equal(test.err, err)
 					accountMap = convertAccountsToMap(accounts)
 					for id, account := range test.expectedAccs {
 						account.Plan = test.plans[id]
 						account.PortalApps = test.portalApps[id]
+						for _, portalApp := range account.PortalApps {
+							portalApp.Users = test.portalAppUsers[portalApp.ID]
+						}
 					}
 					ts.Equal(test.expectedAccs, accountMap)
 				}
 			})
 		}
 	})
-
 	/* ------ V2 User Read Tests ------ */
 
 	ts.Run("Test_GetPortalUser", func() {
@@ -1959,13 +2155,14 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					UpdatedAt: testdata.MockTimestamp,
 					Users: map[types.UserID]types.AccountUserAccess{
 						"user_1": {
-							UserID:         "user_1",
-							Email:          "james.holden123@test.com",
-							Owner:          true,
-							Accepted:       true,
-							IconURL:        "https://picsum.photos/200",
-							UpdatesProduct: true,
-							BetaTester:     true,
+							UserID:             "user_1",
+							Email:              "james.holden123@test.com",
+							Owner:              true,
+							IconURL:            "https://picsum.photos/200",
+							UpdatesProduct:     true,
+							BetaTester:         true,
+							PortalAppRoles:     map[types.PortalAppID]types.RoleName{},
+							PortalAppsAccepted: map[types.PortalAppID]bool{},
 						},
 					},
 					Plan: &types.Plan{
@@ -2278,14 +2475,14 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					RoleName:    types.RoleMember,
 				},
 				expected: &types.AccountUserAccess{
-					AccountID:        "account_4",
-					UserID:           "user_11",
-					Email:            "bernard.marx@test.com",
-					Accepted:         false,
-					IconURL:          "https://picsum.photos/200",
-					UpdatesProduct:   true,
-					UpdatesMarketing: true,
-					PortalAppRoles:   map[types.PortalAppID]types.RoleName{"test_app_1": types.RoleMember},
+					AccountID:          "account_4",
+					UserID:             "user_11",
+					Email:              "bernard.marx@test.com",
+					IconURL:            "https://picsum.photos/200",
+					UpdatesProduct:     true,
+					UpdatesMarketing:   true,
+					PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_1": types.RoleMember},
+					PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_1": false},
 				},
 			},
 			{
@@ -2297,11 +2494,11 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					RoleName:    types.RoleAdmin,
 				},
 				expected: &types.AccountUserAccess{
-					AccountID:      "account_3",
-					UserID:         "", // UserID created when user created
-					Email:          "winston.smith@test.com",
-					Accepted:       false,
-					PortalAppRoles: map[types.PortalAppID]types.RoleName{"test_app_3": types.RoleAdmin},
+					AccountID:          "account_3",
+					UserID:             "", // UserID created when user created
+					Email:              "winston.smith@test.com",
+					PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_3": types.RoleAdmin},
+					PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_3": false},
 				},
 			},
 			{
@@ -2434,16 +2631,14 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					"user_6":  testdata.AccountUserAccess[6],
 					"user_10": testdata.AccountUserAccess[12],
 					"user_7": {
-						UserID:   "user_7",
-						Email:    "frodo.baggins123@test.com",
-						Accepted: true,
-						PortalAppRoles: map[types.PortalAppID]types.RoleName{
-							"test_app_3": types.RoleAdmin,
-						},
-						IconURL:          "https://picsum.photos/200",
-						UpdatesProduct:   true,
-						UpdatesMarketing: true,
-						BetaTester:       true,
+						UserID:             "user_7",
+						Email:              "frodo.baggins123@test.com",
+						PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_3": types.RoleAdmin},
+						PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_3": true},
+						IconURL:            "https://picsum.photos/200",
+						UpdatesProduct:     true,
+						UpdatesMarketing:   true,
+						BetaTester:         true,
 					},
 				},
 				testCreatedTime: testdata.MockTimestamp,
@@ -2462,16 +2657,14 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					"user_6":  testdata.AccountUserAccess[6],
 					"user_10": testdata.AccountUserAccess[12],
 					"user_7": {
-						UserID:   "user_7",
-						Email:    "frodo.baggins123@test.com",
-						Accepted: true,
-						PortalAppRoles: map[types.PortalAppID]types.RoleName{
-							"test_app_3": types.RoleMember,
-						},
-						IconURL:          "https://picsum.photos/200",
-						UpdatesProduct:   true,
-						UpdatesMarketing: true,
-						BetaTester:       true,
+						UserID:             "user_7",
+						Email:              "frodo.baggins123@test.com",
+						PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_3": types.RoleMember},
+						PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_3": true},
+						IconURL:            "https://picsum.photos/200",
+						UpdatesProduct:     true,
+						UpdatesMarketing:   true,
+						BetaTester:         true,
 					},
 				},
 				testCreatedTime: testdata.MockTimestamp,
@@ -2489,26 +2682,22 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					"user_9": testdata.AccountUserAccess[9],
 					"user_2": testdata.AccountUserAccess[10],
 					"user_3": {
-						UserID:   "user_3",
-						Email:    "ellen.ripley789@test.com",
-						Accepted: true,
-						PortalAppRoles: map[types.PortalAppID]types.RoleName{
-							"test_app_2": types.RoleAdmin,
-						},
-						IconURL:          "https://picsum.photos/200",
-						UpdatesProduct:   true,
-						UpdatesMarketing: true,
+						UserID:             "user_3",
+						Email:              "ellen.ripley789@test.com",
+						PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_2": types.RoleAdmin},
+						PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_2": true},
+						IconURL:            "https://picsum.photos/200",
+						UpdatesProduct:     true,
+						UpdatesMarketing:   true,
 					},
 					"user_4": {
-						Owner:    true,
-						UserID:   "user_4",
-						Email:    "ulfric.stormcloak123@test.com",
-						Accepted: true,
-						PortalAppRoles: map[types.PortalAppID]types.RoleName{
-							"test_app_2": types.RoleOwner,
-						},
-						IconURL:    "https://picsum.photos/200",
-						BetaTester: true,
+						Owner:              true,
+						UserID:             "user_4",
+						Email:              "ulfric.stormcloak123@test.com",
+						PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_2": types.RoleOwner},
+						PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_2": true},
+						IconURL:            "https://picsum.photos/200",
+						BetaTester:         true,
 					},
 				},
 				testCreatedTime: testdata.MockTimestamp,
@@ -2526,26 +2715,22 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					"user_9": testdata.AccountUserAccess[9],
 					"user_2": testdata.AccountUserAccess[10],
 					"user_4": {
-						UserID:   "user_4",
-						Email:    "ulfric.stormcloak123@test.com",
-						Accepted: true,
-						PortalAppRoles: map[types.PortalAppID]types.RoleName{
-							"test_app_2": types.RoleAdmin,
-						},
-						IconURL:    "https://picsum.photos/200",
-						BetaTester: true,
+						UserID:             "user_4",
+						Email:              "ulfric.stormcloak123@test.com",
+						PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_2": types.RoleAdmin},
+						PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_2": true},
+						IconURL:            "https://picsum.photos/200",
+						BetaTester:         true,
 					},
 					"user_3": {
-						Owner:    true,
-						UserID:   "user_3",
-						Email:    "ellen.ripley789@test.com",
-						Accepted: true,
-						PortalAppRoles: map[types.PortalAppID]types.RoleName{
-							"test_app_2": types.RoleOwner,
-						},
-						IconURL:          "https://picsum.photos/200",
-						UpdatesProduct:   true,
-						UpdatesMarketing: true,
+						Owner:              true,
+						UserID:             "user_3",
+						Email:              "ellen.ripley789@test.com",
+						PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_2": types.RoleOwner},
+						PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_2": true},
+						IconURL:            "https://picsum.photos/200",
+						UpdatesProduct:     true,
+						UpdatesMarketing:   true,
 					},
 				},
 				testCreatedTime: testdata.MockTimestamp,
@@ -2684,13 +2869,13 @@ func (ts *phdE2EWriteTestSuite) Test_WriteTests() {
 					ProviderUserID:   "auth0|daenerys_targaryen",
 				},
 				expected: &types.AccountUserAccess{
-					AccountID:      "account_3",
-					UserID:         "user_10",
-					Email:          "daenerys.targaryen123@test.com",
-					Accepted:       true,
-					PortalAppRoles: map[types.PortalAppID]types.RoleName{"test_app_3": types.RoleMember},
-					IconURL:        "https://picsum.photos/200",
-					BetaTester:     true,
+					AccountID:          "account_3",
+					UserID:             "user_10",
+					Email:              "daenerys.targaryen123@test.com",
+					PortalAppRoles:     map[types.PortalAppID]types.RoleName{"test_app_3": types.RoleMember},
+					PortalAppsAccepted: map[types.PortalAppID]bool{"test_app_3": true},
+					IconURL:            "https://picsum.photos/200",
+					BetaTester:         true,
 				},
 				err: nil,
 			},
