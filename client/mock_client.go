@@ -300,25 +300,32 @@ func (_m *MockIDBClient) GetAccountByID(ctx context.Context, accountID types.Acc
 	return r0, r1
 }
 
-// GetAccountsByUser provides a mock function with given fields: ctx, userID
-func (_m *MockIDBClient) GetAccountsByUser(ctx context.Context, userID types.UserID) ([]*types.Account, error) {
-	ret := _m.Called(ctx, userID)
+// GetAccountsByUser provides a mock function with given fields: ctx, userID, options
+func (_m *MockIDBClient) GetAccountsByUser(ctx context.Context, userID types.UserID, options ...AccountOptions) ([]*types.Account, error) {
+	_va := make([]interface{}, len(options))
+	for _i := range options {
+		_va[_i] = options[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, userID)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 []*types.Account
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, types.UserID) ([]*types.Account, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, types.UserID, ...AccountOptions) ([]*types.Account, error)); ok {
+		return rf(ctx, userID, options...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, types.UserID) []*types.Account); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, types.UserID, ...AccountOptions) []*types.Account); ok {
+		r0 = rf(ctx, userID, options...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*types.Account)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, types.UserID) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, types.UserID, ...AccountOptions) error); ok {
+		r1 = rf(ctx, userID, options...)
 	} else {
 		r1 = ret.Error(1)
 	}
