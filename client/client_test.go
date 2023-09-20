@@ -72,7 +72,7 @@ func Test_DBClientImplementsInterfaces(t *testing.T) {
 	}
 }
 
-func Test_V1_E2E_PocketHTTPDBTestSuite(t *testing.T) {
+func Test_V1_E2E_PortalHTTPDBTestSuite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping end to end test")
 	}
@@ -110,13 +110,13 @@ func (ts *phdE2EReadTestSuite) Test_ReadTests() {
 			{
 				name:         "Should return status 200 and correct body on port 1",
 				url:          fmt.Sprintf("http://localhost:%s/healthz", phdPortOne),
-				expectedBody: "DB Check Done. Pocket HTTP DB is up and running!\nImage Tag: development",
+				expectedBody: "DB Check Done. Portal HTTP DB is up and running!\nImage Tag: development",
 				expectedCode: http.StatusOK,
 			},
 			{
 				name:         "Should return status 200 and correct body on port 2",
 				url:          fmt.Sprintf("http://localhost:%s/healthz", phdPortTwo),
-				expectedBody: "DB Check Done. Pocket HTTP DB is up and running!\nImage Tag: development",
+				expectedBody: "DB Check Done. Portal HTTP DB is up and running!\nImage Tag: development",
 				expectedCode: http.StatusOK,
 			},
 		}

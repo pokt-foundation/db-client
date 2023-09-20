@@ -1,7 +1,7 @@
 <div align="center">
-    <img src=".github/banner.png" alt="Pocket Network logo" width="600"/>
+    <img src=".github/grove_logo.png" alt="Grove logo" width="600"/>
     <h1>Portal Database Client</h1>
-    <big>Go database client for interacting with the Pocket HTTB Database</big>
+    <big>Go database client for interacting with the Portal HTTB Database</big>
     <div>
     <br/>
         <a href="https://github.com/pokt-foundation/db-client/pulse"><img src="https://img.shields.io/github/last-commit/pokt-foundation/db-client.svg"/></a>
@@ -13,7 +13,7 @@
 
 # Usage
 
-This client should be installed in any Pocket Go backend repo that needs to interact with PHD. The interface to be used depends on the interactions required by the repo:
+This client should be installed in any Grove Go backend repo that needs to interact with PHD. The interface to be used depends on the interactions required by the repo:
 
 - `IDBReader`: read-only
 - `IDBWrite`: write-only

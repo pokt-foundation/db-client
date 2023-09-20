@@ -2,12 +2,12 @@
 version: "3"
 
 services:
-  pocket-http-db-1:
+  portal-http-db-1:
     # # 1. Set to Master once PHD E2E test updated to include latest DB client version changes
-    # build: github.com/pokt-foundation/pocket-http-db.git#master
+    # build: github.com/pokt-foundation/portal-http-db.git#master
     # # 2. Set to <BRANCH NAME> when incorporating latest changes to PHD client from a PHD feature branch
-    build: github.com/pokt-foundation/pocket-http-db.git#staging
-    container_name: pocket-http-db-1
+    build: github.com/pokt-foundation/portal-http-db.git#staging
+    container_name: portal-http-db-1
     restart: always
     ports:
       - 8080:8080
@@ -28,12 +28,12 @@ services:
       timeout: 10s
       retries: 5
 
-  pocket-http-db-2:
+  portal-http-db-2:
     # # 1. Set to Master once PHD E2E test updated to include latest DB client version changes
-    # build: github.com/pokt-foundation/pocket-http-db.git#master
+    # build: github.com/pokt-foundation/portal-http-db.git#master
     # # 2. Set to <BRANCH NAME> when incorporating latest changes to PHD client from a PHD feature branch
-    build: github.com/pokt-foundation/pocket-http-db.git#staging
-    container_name: pocket-http-db-2
+    build: github.com/pokt-foundation/portal-http-db.git#staging
+    container_name: portal-http-db-2
     restart: always
     ports:
       - 8081:8080

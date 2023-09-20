@@ -16,7 +16,7 @@ import (
 
 type (
 	// DBClient struct contains all the possible methods to interact
-	// with the Pocket HTTP DB amd satisfies the IDBClient interface
+	// with the Portal HTTP DB amd satisfies the IDBClient interface
 	DBClient struct {
 		IDBClient
 		httpClient *http.Client
@@ -33,13 +33,13 @@ type (
 		retries    int
 	}
 
-	// IDBClient interface contains all read & write methods to interact with the Pocket HTTP DB
+	// IDBClient interface contains all read & write methods to interact with the Portal HTTP DB
 	IDBClient interface {
 		IDBReader
 		IDBWriter
 	}
 
-	// IDBReader interface contains read-only methods for interacting with the Pocket HTTP DB
+	// IDBReader interface contains read-only methods for interacting with the Portal HTTP DB
 	IDBReader interface {
 		// GetChainByID returns a single Chain by its relay chain ID - GET `/v2/chain/{id}`
 		GetChainByID(ctx context.Context, chainID types.RelayChainID) (*types.Chain, error)
@@ -83,7 +83,7 @@ type (
 		GetBlockedContracts(ctx context.Context) (types.GlobalBlockedContracts, error)
 	}
 
-	// IDBWriter interface contains write methods for interacting with the Pocket HTTP DB
+	// IDBWriter interface contains write methods for interacting with the Portal HTTP DB
 	IDBWriter interface {
 		// CreateChainAndGigastakeApps creates a new blockchain and its Gigastake apps in the DB - POST `/v2/chain`
 		CreateChainAndGigastakeApps(ctx context.Context, newChainInput types.NewChainInput) (*types.NewChainInput, error)
@@ -252,7 +252,7 @@ var (
 	errResponseNotOK error = errors.New("Response not OK")
 )
 
-// NewDBClient returns a read-write HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
+// NewDBClient returns a read-write HTTP client to use the Portal HTTP DB - https://github.com/pokt-foundation/portal-http-db
 func NewDBClient(config Config) (IDBClient, error) {
 	if err := config.validateConfig(); err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func NewDBClient(config Config) (IDBClient, error) {
 	return &DBClient{httpClient: newHTTPClient(config), config: config}, nil
 }
 
-// NewReadOnlyDBClient returns a read-only HTTP client to use the Pocket HTTP DB - https://github.com/pokt-foundation/pocket-http-db
+// NewReadOnlyDBClient returns a read-only HTTP client to use the Portal HTTP DB - https://github.com/pokt-foundation/portal-http-db
 func NewReadOnlyDBClient(config Config) (IDBReader, error) {
 	if err := config.validateConfig(); err != nil {
 		return nil, err
@@ -281,7 +281,7 @@ func (c Config) validateConfig() error {
 	return nil
 }
 
-// v2BasePath returns the /v2/ base path for a given data type eg. `https://pocket.http-db-url.com/v2/chain`
+// v2BasePath returns the /v2/ base path for a given data type eg. `https://portal.http-db-url.com/v2/chain`
 func (db *DBClient) v2BasePath(dataTypePath basePath) string {
 	return fmt.Sprintf("%s/v2/%s", db.config.BaseURL, dataTypePath)
 }
