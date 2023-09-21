@@ -1,7 +1,7 @@
 <div align="center">
     <img src=".github/grove_logo.png" alt="Grove logo" width="600"/>
     <h1>Portal Database Client</h1>
-    <big>Go database client for interacting with the Portal HTTB Database</big>
+    <big>Go database client for interacting with the Portal HTTP Database</big>
     <div>
     <br/>
         <a href="https://github.com/pokt-foundation/db-client/pulse"><img src="https://img.shields.io/github/last-commit/pokt-foundation/db-client.svg"/></a>
