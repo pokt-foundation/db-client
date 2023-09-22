@@ -120,7 +120,7 @@ type (
 		WriteAccountUser(ctx context.Context, createUser types.CreateAccountUserAccess, time time.Time) (map[string]types.UserID, error)
 		// SetAccountUserRole updates the role for a single Account User - PUT `/v2/account/user/update_role`
 		SetAccountUserRole(ctx context.Context, updateUser types.UpdateAccountUserRole, time time.Time) (map[string]string, error)
-		// UpdateAcceptAccountUser accepts an Account User Access - PUT `/v2/account/user/accept`
+		// UpdateAcceptAccountUser accepts or declines an Account User Access - PUT `/v2/account/user/accept`
 		UpdateAcceptAccountUser(ctx context.Context, acceptUser types.UpdateAcceptAccountUser, time time.Time) (map[string]string, error)
 		// RemoveAccountUser removes an Account User's Role - PUT `/v2/account/user/remove`
 		RemoveAccountUser(ctx context.Context, removeUser types.UpdateRemoveAccountUser) (map[string]string, error)
@@ -867,7 +867,7 @@ func (db *DBClient) SetAccountUserRole(ctx context.Context, updateUser types.Upd
 	return putReq[map[string]string](endpoint, db.getAuthHeaderForWrite(), updateUserJSON, db.httpClient)
 }
 
-// UpdateAcceptAccountUser accepts an Account User Access - PUT `/v2/account/user/accept`
+// UpdateAcceptAccountUser accepts or declines an Account User Access - PUT `/v2/account/user/accept`
 func (db *DBClient) UpdateAcceptAccountUser(ctx context.Context, acceptUser types.UpdateAcceptAccountUser, time time.Time) (map[string]string, error) {
 	if acceptUser.PortalAppID == "" {
 		return nil, errNoPortalAppID
